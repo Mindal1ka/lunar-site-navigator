@@ -172,15 +172,17 @@ def site_heights(dn: np.ndarray, n: int, scale: float, x: np.ndarray, y: np.ndar
 
 
 class Gpu:
-    def __init__(self) -> None:
+    def __init__(self, dem: str = "ldem_80s_80m", n_az: int = N_AZ_MAP, max_dist: float = MAX_DIST) -> None:
+        """Map method by default; dem="ldem_80s_40m", n_az=1440, max_dist=200 km is the site method."""
         sun_dir, sun_au, earth, self.meta, self.n_hours = load_year()
-        self.dem = open_dem("ldem_80s_80m")
+        self.n_az, self.max_dist = n_az, max_dist
+        self.dem = open_dem(dem)
         self.dn_host = np.ascontiguousarray(self.dem.dn)
         self.dn = cp.asarray(self.dn_host)
         self.sun_dir, self.sun_au, self.earth = (cp.asarray(np.ascontiguousarray(a)) for a in (sun_dir, sun_au, earth))
 
     def compute(self, lat: np.ndarray, lon: np.ndarray, batch: int = 1024, progress: bool = False,
-                return_prof: bool = False):
+                return_prof: bool = False, obs_h: float = OBS_H):
         """(N, 3) [sun fraction, earth fraction, longest night in hours]; -1 in col 0 = outside the DEM."""
         x = 2.0 * MOON_R_M * np.tan(np.radians(90.0 + lat) / 2) * np.sin(np.radians(lon))
         y = 2.0 * MOON_R_M * np.tan(np.radians(90.0 + lat) / 2) * np.cos(np.radians(lon))
@@ -188,7 +190,7 @@ class Gpu:
         valid = np.isfinite(h0)
         idx = np.nonzero(valid)[0]
         out = np.full((lat.size, 3), -1.0)
-        profs = np.full((lat.size, N_AZ_MAP), np.nan, np.float32) if return_prof else None
+        profs = np.full((lat.size, self.n_az), np.nan, np.float32) if return_prof else None
         fr = frames(lat, lon)
         t0 = time.perf_counter()
         for b in range(0, idx.size, batch):
@@ -197,19 +199,19 @@ class Gpu:
             f64 = cp.asarray(np.ascontiguousarray(fr[sel]))
             f32 = f64.astype(cp.float32)
             hh = cp.asarray(h0[sel].astype(np.float32))
-            prof = cp.empty(nc * N_AZ_MAP, cp.float32)
-            nthr = nc * N_AZ_MAP
+            prof = cp.empty(nc * self.n_az, cp.float32)
+            nthr = nc * self.n_az
             K_HOR(((nthr + 255) // 256,), (256,),
                   (self.dn, np.int32(self.dem.n), np.float32(self.dem.scale), f32, hh, np.int32(nc),
-                   np.int32(N_AZ_MAP), np.float32(OBS_H), np.float32(MAX_DIST), prof))
-            rs = cp.asarray(MOON_R_M + h0[sel] + OBS_H)
+                   np.int32(self.n_az), np.float32(obs_h), np.float32(self.max_dist), prof))
+            rs = cp.asarray(MOON_R_M + h0[sel] + obs_h)
             res = cp.empty(nc * 3, cp.float64)
             K_MET(((nc + 127) // 128,), (128,),
-                  (prof, np.int32(N_AZ_MAP), f64, rs, np.int32(nc), np.int32(self.n_hours),
+                  (prof, np.int32(self.n_az), f64, rs, np.int32(nc), np.int32(self.n_hours),
                    self.sun_dir, self.sun_au, self.earth, np.float64(EARTH_MARGIN), res))
             out[sel] = res.get().reshape(nc, 3)
             if return_prof:
-                profs[sel] = prof.get().reshape(nc, N_AZ_MAP)
+                profs[sel] = prof.get().reshape(nc, self.n_az)
             if progress:
                 done = min(b + batch, idx.size)
                 el = time.perf_counter() - t0

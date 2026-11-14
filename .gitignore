@@ -34,3 +34,6 @@ CLAUDE.md
 
 # Agent worktrees
 /.claude/
+
+# Helper for the second GPU machine (not part of the app)
+/tools/
