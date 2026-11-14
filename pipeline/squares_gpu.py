@@ -66,7 +66,7 @@ def meta_json(sites: list[dict], g: Gpu) -> dict:
                   "centre cell (n // 2, n // 2) is the site",
         "sun_earth_scale": "value / 200 = fraction (0.5 % steps); 255 = no data",
         "night_unit": "days; 253 = 253 days or more; 254 = no sunlight in the whole period; 255 = no data",
-        "slope_unit": "degrees x 4 (254 = 63.5 deg or more); 255 = no data; LOLA 40 m DEM, +-1 pixel",
+        "slope_unit": "degrees x 4 (254 = 63.5 deg or more); 255 = no data; LOLA 40 m DEM, steepest 2 x 2 pixel plane within the cell",
         "earth_margin_deg": EARTH_MARGIN,
         "period_utc": [g.meta["start_utc"], f"+{g.n_hours} h"],
         "method": "same as the site card: LOLA LDEM_80S_40M, 1440 azimuth bins, rays up to 200 km, "

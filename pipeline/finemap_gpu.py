@@ -10,7 +10,7 @@ row 0 at +y (towards lon 0), col 0 at -x:
   sun, earth  value / 200 = fraction (0.5 % steps), 255 = no data
   night       days; 253 = 253 days or more; 254 = no sunlight in the whole period; 255 = no data
   slope       degrees x 4 (0.25 deg steps, 254 = 63.5 deg or more), 255 = no data;
-              from the 40 m LOLA DEM, central differences over 80 m (+-1 pixel)
+              from the 40 m LOLA DEM: steepest 2 x 2 pixel plane within the cell (see slope_deg)
 
 The run is resumable (existing tiles are skipped) and can be split between machines:
   python finemap_gpu.py --part 0/2   and   python finemap_gpu.py --part 1/2
@@ -48,15 +48,27 @@ def encode(out: np.ndarray, n_hours: int, step_s: float) -> np.ndarray:
 
 
 def slope_deg(dn: np.ndarray, n: int, scale: float, x: np.ndarray, y: np.ndarray) -> np.ndarray:
-    """Surface slope (deg) at map x, y from the DEM: central differences over +-1 pixel (nearest pixel)."""
+    """Surface slope (deg) of the cell at map x, y: the steepest of the four planes fitted to the
+    2 x 2 pixel quads of the 3 x 3 pixel block around the nearest pixel (40 m DEM: ~120 m footprint,
+    80 m baselines). A plain central difference reads ~0 on top of a symmetric ridge, where both
+    flanks are steep; the steepest quad does not."""
     col = np.rint(x / scale + n / 2.0 - 0.5).astype(np.int64)
     row = np.rint(-y / scale + n / 2.0 - 0.5).astype(np.int64)
     ok = (col >= 1) & (row >= 1) & (col < n - 1) & (row < n - 1)
     out = np.full(x.shape, np.nan)
     c, r = col[ok], row[ok]
-    dzdx = (dn[r, c + 1].astype(float) - dn[r, c - 1]) * 0.5 / (2 * scale)
-    dzdy = (dn[r - 1, c].astype(float) - dn[r + 1, c]) * 0.5 / (2 * scale)
-    out[ok] = np.degrees(np.arctan(np.hypot(dzdx, dzdy)))
+    best = np.zeros(c.shape)
+    for dr in (-1, 0):
+        for dc in (-1, 0):
+            z00 = dn[r + dr, c + dc].astype(float)
+            z01 = dn[r + dr, c + dc + 1].astype(float)
+            z10 = dn[r + dr + 1, c + dc].astype(float)
+            z11 = dn[r + dr + 1, c + dc + 1].astype(float)
+            # dn is in 0.5 m units; mean difference across the quad over one pixel (scale m)
+            dzdx = ((z01 + z11) - (z00 + z10)) * 0.5 * 0.5 / scale
+            dzdy = ((z00 + z01) - (z10 + z11)) * 0.5 * 0.5 / scale
+            best = np.maximum(best, np.hypot(dzdx, dzdy))
+    out[ok] = np.degrees(np.arctan(best))
     return out
 
 
@@ -81,7 +93,7 @@ def main() -> None:
         "planes": ["sun", "earth", "night", "slope"],
         "sun_earth_scale": "value / 200 = fraction (0.5 % steps); 255 = no data",
         "night_unit": "days; 253 = 253 days or more; 254 = no sunlight in the whole period; 255 = no data",
-        "slope_unit": "degrees x 4 (254 = 63.5 deg or more); 255 = no data; LOLA 40 m DEM, +-1 pixel",
+        "slope_unit": "degrees x 4 (254 = 63.5 deg or more); 255 = no data; LOLA 40 m DEM, steepest 2 x 2 pixel plane within the cell",
         "observer_height_m": OBS_H, "earth_margin_deg": EARTH_MARGIN,
         "method": "LOLA LDEM_80S_80M, 720 azimuth bins, rays up to 150 km, hourly SPICE ephemeris (GPU)",
     }, indent=1))

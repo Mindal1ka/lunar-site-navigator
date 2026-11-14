@@ -17,7 +17,7 @@
  "layout": "uint8 planes of n x n, row-major, row 0 at +y (towards lon 0), col 0 at -x; centre cell (n // 2, n // 2) is the site",
  "sun_earth_scale": "value / 200 = fraction (0.5 % steps); 255 = no data",
  "night_unit": "days; 253 = 253 days or more; 254 = no sunlight in the whole period; 255 = no data",
- "slope_unit": "degrees x 4 (254 = 63.5 deg or more); 255 = no data; LOLA 40 m DEM, +-1 pixel",
+ "slope_unit": "degrees x 4 (254 = 63.5 deg or more); 255 = no data; LOLA 40 m DEM, steepest 2 x 2 pixel plane within the cell",
  "earth_margin_deg": 1.0,
  "period_utc": [
   "2026-11-01T00:00:00Z",
