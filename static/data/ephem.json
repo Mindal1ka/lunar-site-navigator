@@ -1,0 +1,27 @@
+{
+  "start_utc": "2026-11-01T00:00:00Z",
+  "start_unix": 1793491200,
+  "step_s": 3600.0,
+  "count": 36529,
+  "record": [
+    "sun_dir_x",
+    "sun_dir_y",
+    "sun_dir_z",
+    "sun_dist_au",
+    "earth_x_km",
+    "earth_y_km",
+    "earth_z_km"
+  ],
+  "dtype": "float32-le",
+  "frame": "MOON_ME (MOON_ME_DE440_ME421, = LOLA 'Mean Earth/Polar Axis of DE421')",
+  "observer": "Moon centre",
+  "correction": "LT+S (apparent)",
+  "kernels": [
+    "naif0012.tls",
+    "pck00011.tpc",
+    "de440s.bsp",
+    "moon_pa_de440_200625.bpc",
+    "moon_de440_250416.tf"
+  ],
+  "source": "NASA/JPL NAIF SPICE generic kernels, https://naif.jpl.nasa.gov/pub/naif/generic_kernels/"
+}

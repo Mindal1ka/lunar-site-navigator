@@ -1,0 +1,33 @@
+node_modules
+
+# Output
+.output
+.vercel
+.netlify
+.wrangler
+/.svelte-kit
+/build
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Raw downloads and intermediate data (large, re-creatable via pipeline/)
+/data/raw/
+/data/work/
+__pycache__/
+.venv/
+
+# Local agent rules (not published)
+AGENTS.md
+CLAUDE.md
