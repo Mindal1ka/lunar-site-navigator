@@ -5,6 +5,11 @@
 	and phase, site markers, heat map overlay and a damped orbit camera.
 -->
 <script lang="ts">
+	/** Render the element as a direct child of <body> (so it can sit above the app's panels). */
+	function toBody(node: HTMLElement) {
+		document.body.appendChild(node);
+		return { destroy: () => node.remove() };
+	}
 	import { onMount, untrack } from 'svelte';
 	import { fade, fly, scale, slide } from 'svelte/transition';
 	import { cubicOut, backOut } from 'svelte/easing';
@@ -847,7 +852,8 @@
 	{#if hover && !app.pointBusy}
 		<div
 			class="readout glass"
-			style="--x: {hover.x}px; --y: {hover.y}px"
+			use:toBody
+			style="--x: {hover.x + (host?.getBoundingClientRect().left ?? 0)}px; --y: {hover.y + (host?.getBoundingClientRect().top ?? 0)}px"
 			class:flip={hover.x > (host?.clientWidth ?? 0) - 260}
 			aria-hidden="true"
 			transition:fade={{ duration: 120 }}
@@ -1368,12 +1374,13 @@
 	}
 
 	/* ---------- hover readout */
+	/* moved to <body>: shown above every panel and the top bar while the pointer is over the terrain */
 	.readout {
-		position: absolute;
+		position: fixed;
 		left: 0;
 		top: 0;
 		transform: translate(calc(var(--x) + 18px), calc(var(--y) + 18px));
-		z-index: 4;
+		z-index: 35;
 		min-width: 210px;
 		padding: 10px 12px;
 		font-size: 12px;
@@ -1695,15 +1702,17 @@
 	}
 	.agg {
 		display: flex;
-		align-items: center;
-		gap: 10px;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 6px;
 	}
 	.agg .sub {
 		font-size: 11px;
 		color: var(--text-3);
-		flex: none;
-		max-width: 92px;
 		line-height: 1.25;
+	}
+	.agg .seg button {
+		white-space: nowrap;
 	}
 	.chip.slope {
 		background: #7fe0b0;
