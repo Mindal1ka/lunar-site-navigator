@@ -272,7 +272,7 @@ export type SquarePoll =
 	| { kind: 'ready'; square: Square }
 	| { kind: 'pending'; state: 'queued' | 'running'; position: number; etaS: number }
 	| { kind: 'busy'; retryS: number }
-	| { kind: 'error'; message: string };
+	| { kind: 'error'; message: 'unavailable' | 'size' | 'invalid' };
 
 /** One request to /api/square (the caller re-polls on 'pending'). */
 export async function pollSquareApi(key: string, lat: number, lon: number, signal?: AbortSignal): Promise<SquarePoll> {
@@ -288,7 +288,7 @@ export async function pollSquareApi(key: string, lat: number, lon: number, signa
 	if (r.status === 200) {
 		const buf = new Uint8Array(await r.arrayBuffer());
 		const m = meta ?? DEFAULT_META;
-		if (buf.length !== SQ_PLANES * m.n * m.n) return { kind: 'error', message: 'Unexpected detail map size' };
+		if (buf.length !== SQ_PLANES * m.n * m.n) return { kind: 'error', message: 'size' };
 		return { kind: 'ready', square: makeSquare(key, 'exact', lat, lon, m, buf) };
 	}
 	const body = await r.json().catch(() => ({}) as Record<string, unknown>);
@@ -301,8 +301,9 @@ export async function pollSquareApi(key: string, lat: number, lon: number, signa
 		};
 	if (r.status === 503 || r.status === 429) return { kind: 'busy', retryS: Number(body.retry_s) || 30 };
 	if (r.status === 502 || r.status === 504) return { kind: 'busy', retryS: 30 };
-	if (r.status === 404) return { kind: 'error', message: 'the detail map service is not available' };
-	return { kind: 'error', message: String(body.error ?? `HTTP ${r.status}`) };
+	// message is a code the card translates: 'unavailable' | 'size' | 'invalid'
+	if (r.status === 400) return { kind: 'error', message: 'invalid' };
+	return { kind: 'error', message: 'unavailable' };
 }
 
 /** Same layout as squares.json, used if that file is missing when an API square arrives. */

@@ -12,7 +12,7 @@ Point API for custom sites: the same validated horizon code as the curated sites
         202 {"state": "queued"|"running", "position": int, "eta_s": number} -> re-poll every ~2 s;
         503 {"error": "busy", "retry_s": n} when 6 squares are already waiting;
         503 {"error": "gpu unavailable"} without CuPy / CUDA;
-        429 {"error": "too many pending requests"} for more than 2 pending squares per client;
+        a client with 2 waiting squares that asks for a third loses its oldest waiting one;
         400 {"error": ...} for invalid points (same validation as /api/point).
       One background GPU worker computes one square at a time (FIFO); requests for the same
       rounded point share one job; waiting jobs nobody polled for 60 s are dropped.
@@ -97,7 +97,7 @@ SQ_N = 101
 SQ_BYTES = 7 * SQ_N * SQ_N
 SQ_CACHE = WORK / "square_cache"
 MAX_QUEUE = 6          # waiting jobs (the running one is not counted)
-MAX_PER_CLIENT = 2     # pending (waiting or running) jobs per client address
+MAX_PER_CLIENT = 2     # waiting jobs per client address (newest click wins)
 STALE_S = 60.0         # a waiting job nobody polled for this long is dropped
 MEM_ITEMS = 64         # in-memory LRU of finished squares (70 kB each)
 
@@ -119,9 +119,10 @@ class SquareService:
         self.jobs: dict[tuple[float, float], _Job] = {}  # waiting, running, or failed until reported
         self.running: _Job | None = None
         self.started = 0.0
-        self.avg_s = 60.0  # running average of the measured job time
+        self.avg_s = 90.0  # running average of the measured job time (2 heights x 10 201 cells)
         self.mem: OrderedDict[tuple[float, float], bytes] = OrderedDict()
         self.gpu_error: str | None = None
+        self.gpu_retry_at = 0.0  # after a transient init failure (e.g. GPU memory full) try again later
         self.worker: threading.Thread | None = None
 
     @staticmethod
@@ -154,20 +155,22 @@ class SquareService:
             del self.jobs[j.key]
 
     def _status(self, j: _Job) -> dict:
-        left = max(self.avg_s - (time.monotonic() - self.started), 1.0) if self.running else 0.0
+        left = max(self.avg_s - (time.monotonic() - self.started), 5.0) if self.running else 0.0
         if j.state == "running":
             return {"state": "running", "position": 0, "eta_s": round(left, 1)}
         pos = self.queue.index(j) + 1
         return {"state": "queued", "position": pos, "eta_s": round(left + pos * self.avg_s, 1)}
 
     def request(self, key: tuple[float, float], client: str) -> tuple[int, bytes | dict]:
-        """(200, bytes) | (202, status dict) | (429 / 503, error dict)."""
+        """(200, bytes) | (202, status dict) | (503, error dict with retry_s)."""
         with self.cv:
             data = self._cached(key)
             if data is not None:
                 return 200, data
             if self.gpu_error:
-                return 503, {"error": "gpu unavailable"}
+                if time.monotonic() < self.gpu_retry_at:
+                    return 503, {"error": "gpu unavailable", "retry_s": int(self.gpu_retry_at - time.monotonic()) + 1}
+                self.gpu_error, self.worker = None, None  # transient failure: allow a new attempt
             self._drop_stale()
             j = self.jobs.get(key)
             if j is not None:
@@ -176,8 +179,10 @@ class SquareService:
                     return 503, {"error": "computation failed", "retry_s": 30}
                 j.polled = time.monotonic()
                 return 202, self._status(j)
-            if sum(o.client == client and o.state != "failed" for o in self.jobs.values()) >= MAX_PER_CLIENT:
-                return 429, {"error": "too many pending requests"}
+            mine = [o for o in self.queue if o.client == client]
+            if len(mine) >= MAX_PER_CLIENT:  # the newest click wins: drop this client's oldest waiting job
+                self.queue.remove(mine[0])
+                del self.jobs[mine[0].key]
             if len(self.queue) >= MAX_QUEUE:
                 return 503, {"error": "busy", "retry_s": int(round(self.avg_s))}
             j = _Job(key, client)
@@ -196,8 +201,10 @@ class SquareService:
             g = Gpu(**squares_gpu.SITE_METHOD)
         except Exception as e:  # noqa: BLE001 - no CuPy / CUDA / GPU memory
             sys.stderr.write(f"api square: GPU unavailable: {e!r}\n")
+            permanent = isinstance(e, ImportError) or "NoDevice" in repr(e) or "InsufficientDriver" in repr(e)
             with self.cv:
                 self.gpu_error = repr(e)
+                self.gpu_retry_at = time.monotonic() + (3600.0 if permanent else 60.0)
                 self.queue.clear()
                 self.jobs.clear()
             return

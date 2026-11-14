@@ -54,7 +54,8 @@
 				queued: (pos: number, eta: string) => `Detailed 10 km map: queued (#${pos}), ${eta}`,
 				running: (eta: string) => `Detailed 10 km map: computing, ${eta}`,
 				busy: (s: number) => `The detail server is busy. Trying again in about ${s} s.`,
-				error: (m: string) => `Detailed map unavailable: ${m}`,
+				error: (m: string) =>
+					`Detailed map unavailable: ${m === 'size' ? 'the server sent an unexpected file' : m === 'invalid' ? 'this point is outside the map' : 'the service is not available right now'}`,
 				cancelled: 'Detailed 10 km map not requested.'
 			},
 			about: (s: number) => (s < 90 ? `about ${Math.max(5, Math.round(s / 5) * 5)} s` : `about ${Math.round(s / 60)} min`),
@@ -100,7 +101,8 @@
 				queued: (pos: number, eta: string) => `Детальна карта 10 км: у черзі (№${pos}), ${eta}`,
 				running: (eta: string) => `Детальна карта 10 км: рахуємо, ${eta}`,
 				busy: (s: number) => `Сервер деталізації зайнятий. Спробуємо ще раз приблизно за ${s} с.`,
-				error: (m: string) => `Детальна карта недоступна: ${m}`,
+				error: (m: string) =>
+					`Детальна карта недоступна: ${m === 'size' ? 'сервер надіслав неочікуваний файл' : m === 'invalid' ? 'ця точка поза мапою' : 'сервіс зараз недоступний'}`,
 				cancelled: 'Детальну карту 10 км не запитано.'
 			},
 			about: (s: number) => (s < 90 ? `приблизно ${Math.max(5, Math.round(s / 5) * 5)} с` : `приблизно ${Math.round(s / 60)} хв`),
@@ -128,7 +130,9 @@
 	const sameWin = $derived(!!sqWin && sqWin.i0 === app.win.i0 && sqWin.i1 === app.win.i1);
 	const sameH = $derived(shownH === app.heightM);
 	const sameM = $derived(!!sq && Math.abs(sq.marginDeg - app.earthMarginDeg) < 1e-6);
-	const matches = $derived(sameWin && sameH && sameM);
+	// a different time window is not a warning: the line always states its own fixed 12-month period;
+	// a different height or Earth margin changes the numbers themselves, so that is flagged
+	const matches = $derived(sameH && sameM);
 
 	function sqPeriodText(s: Square, exact = false): string {
 		const a = new Date(s.startUnix * 1000);
@@ -144,7 +148,7 @@
 	const diffText = $derived.by(() => {
 		if (!sq) return '';
 		const parts: string[] = [];
-		if (!sameWin) parts.push(`${sqPeriodText(sq, true)} (${t.cardIs(cardPeriodExact)})`);
+		if (!sameWin && !(sameH && sameM)) parts.push(`${sqPeriodText(sq, true)} (${t.cardIs(cardPeriodExact)})`);
 		if (!sameH) parts.push(`${fmtNum(shownH)} ${mUnit} (${t.cardIs(`${fmtNum(app.heightM)} ${mUnit}`)})`);
 		if (!sameM) parts.push(`${t.margin(sq.marginDeg)} (${t.cardIs(t.margin(app.earthMarginDeg))})`);
 		return t.differs(parts.join(', '));
@@ -186,7 +190,7 @@
 		</div>
 	{/if}
 {:else}
-	{#if job && !job.hidden && site?.category === 'custom'}
+	{#if job && (!job.hidden || job.state === 'error') && site?.category === 'custom'}
 		<div class="job {job.state}" role="status" aria-label={t.jobAria} transition:slide={{ duration: mo(280), easing: cubicOut }}>
 			{#if job.state === 'queued' || job.state === 'running'}
 				<span class="spin" aria-hidden="true"></span>
@@ -251,7 +255,7 @@
 				<b class="num lv">{app.maxSlopeDeg}°</b>
 			</label>
 			<p class="meta">
-				{sq.kind === 'fast' ? t.fast : t.cells} · {t.h(shownH)} · {sqPeriodText(sq)}{#if !sameH}<span class="warn"> · {diffText}</span>{/if}
+				{sq.kind === 'fast' ? t.fast : t.cells} · {t.h(shownH)} · {sqPeriodText(sq)}{#if !matches}<span class="warn"> · {diffText}</span>{/if}
 			</p>
 			{#if best && best.distM >= 1}
 				<button class="analyse" disabled={app.pointBusy} onclick={() => best && app.addCustomPoint(best.lat, best.lon, 'A')}>

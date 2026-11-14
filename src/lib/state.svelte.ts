@@ -281,10 +281,13 @@ class AppState {
 					again(Math.max(5, r.retryS) * 1000);
 				} else {
 					this.#polls.delete(id);
-					this.#setJob(id, { state: 'error', message: r.message, hidden: hidden() });
+					this.#setJob(id, { state: 'error', message: r.message, hidden: false });
 				}
-			} catch {
-				// aborted
+			} catch (e) {
+				if (ctl.signal.aborted || (e as Error)?.name === 'AbortError') return;
+				// anything else (bad JSON, a decoding error...): show it and let the user retry
+				this.#polls.delete(id);
+				this.#setJob(id, { state: 'error', message: 'unavailable', hidden: false });
 			}
 		};
 		step();
