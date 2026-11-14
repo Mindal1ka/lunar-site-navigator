@@ -1,5 +1,6 @@
 <!-- AI-assisted: written with Claude, reviewed by the team. -->
-<!-- Card shell. Desktop: right glass panel, fixed head + scrolling body.
+<!-- Card shell. Desktop: right glass panel that scrolls as a whole (head included), with a
+     'more below' hint while content is hidden.
      Mobile (<768 px): bottom sheet with a drag handle, flick velocity and two or three snap points. -->
 <script lang="ts">
 	import type { Snippet } from 'svelte';
@@ -13,8 +14,9 @@
 		collapse?: number;
 		expandLabel: string;
 		collapseLabel: string;
+		moreLabel?: string;
 	}
-	let { head, children, label, collapse = 0, expandLabel, collapseLabel }: Props = $props();
+	let { head, children, label, collapse = 0, expandLabel, collapseLabel, moreLabel = 'More below' }: Props = $props();
 
 	const mobile = new MediaQuery('max-width: 767px');
 	const HANDLE = 26;
@@ -153,8 +155,6 @@
 			</button>
 			<div class="head" bind:offsetHeight={headH}>{@render head()}</div>
 		</div>
-	{:else}
-		<div class="head" bind:offsetHeight={headH}>{@render head()}</div>
 	{/if}
 	<div
 		class="body"
@@ -164,8 +164,21 @@
 		onscroll={onScroll}
 		inert={mobile.current && !expanded}
 	>
+		{#if !mobile.current}
+			<div class="head" bind:offsetHeight={headH}>{@render head()}</div>
+		{/if}
 		{@render children()}
 	</div>
+	{#if !mobile.current && !atEnd}
+		<button
+			class="more"
+			onclick={() => body?.scrollBy({ top: body.clientHeight * 0.7, behavior: 'smooth' })}
+			aria-label={moreLabel}
+		>
+			{moreLabel}
+			<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+		</button>
+	{/if}
 </section>
 
 <style>
@@ -195,7 +208,7 @@
 		overflow-y: auto;
 		overscroll-behavior: contain;
 		scrollbar-width: thin;
-		scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+		scrollbar-color: rgba(255, 255, 255, 0.32) transparent;
 		mask-image: linear-gradient(180deg, transparent 0, #000 0, #000 calc(100% - 28px), transparent 100%);
 		transition: mask-image var(--dur);
 	}
@@ -207,6 +220,47 @@
 	}
 	.body.scrolled.at-end {
 		mask-image: linear-gradient(180deg, transparent 0, #000 22px, #000 100%);
+	}
+
+	.body::-webkit-scrollbar {
+		width: 8px;
+	}
+	.body::-webkit-scrollbar-thumb {
+		background: rgba(255, 255, 255, 0.3);
+		border-radius: 4px;
+	}
+	.more {
+		position: absolute;
+		left: 50%;
+		bottom: 10px;
+		z-index: 2;
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 6px 12px;
+		transform: translateX(-50%);
+		border-radius: 999px;
+		border: 1px solid rgba(255, 255, 255, 0.16);
+		background: rgba(20, 26, 38, 0.92);
+		color: rgba(255, 255, 255, 0.85);
+		font-size: 12px;
+		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+		cursor: pointer;
+		animation: bob 1.8s ease-in-out infinite;
+	}
+	.more:hover {
+		background: rgba(32, 40, 56, 0.96);
+		color: #fff;
+	}
+	@keyframes bob {
+		50% {
+			transform: translate(-50%, 3px);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.more {
+			animation: none;
+		}
 	}
 
 	/* ---------- mobile bottom sheet ---------- */

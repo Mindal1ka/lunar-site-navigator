@@ -20,7 +20,7 @@
 	}
 	let cache: Promise<Validation> | null = null;
 	function loadValidation(): Promise<Validation> {
-		return (cache ??= fetch('/data/validation.json').then((r) => {
+		return (cache ??= fetch(dataUrl('/data/validation.json')).then((r) => {
 			if (!r.ok) throw new Error(String(r.status));
 			return r.json() as Promise<Validation>;
 		}).catch((e) => {
@@ -31,6 +31,7 @@
 </script>
 
 <script lang="ts">
+	import { dataUrl } from '#lib/engine/dataurl.ts';
 	import { slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { prefersReducedMotion } from 'svelte/motion';

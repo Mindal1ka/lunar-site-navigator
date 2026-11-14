@@ -248,10 +248,11 @@ export function compass(deg: number, lang: 'en' | 'uk'): string {
 
 // ---- loading
 
+import { dataUrl } from './dataurl.ts';
 const base = '/data/squares';
 let metaP: Promise<SquareMeta | null> | null = null;
 export function loadSquaresMeta(): Promise<SquareMeta | null> {
-	return (metaP ??= fetch(`${base}/squares.json`)
+	return (metaP ??= fetch(dataUrl(`${base}/squares.json`))
 		.then((r) => (r.ok ? (r.json() as Promise<SquareMeta>) : null))
 		.catch(() => null));
 }
@@ -261,7 +262,7 @@ export async function loadSiteSquare(id: string): Promise<Square | null> {
 	const meta = await loadSquaresMeta();
 	const s = meta?.sites[id];
 	if (!meta || !s) return null;
-	const r = await fetch(`${base}/${id}.bin`).catch(() => null);
+	const r = await fetch(dataUrl(`${base}/${id}.bin`)).catch(() => null);
 	if (!r?.ok) return null;
 	const buf = new Uint8Array(await r.arrayBuffer());
 	if (buf.length !== SQ_PLANES * meta.n * meta.n) return null;
@@ -330,7 +331,7 @@ interface FineMeta {
 }
 let fineP: Promise<FineMeta | null> | null = null;
 const fineMeta = () =>
-	(fineP ??= fetch('/data/fine/fine.json')
+	(fineP ??= fetch(dataUrl('/data/fine/fine.json'))
 		.then((r) => (r.ok ? (r.json() as Promise<FineMeta>) : null))
 		.catch(() => null));
 const fineTiles = new Map<string, Promise<Uint8Array | null>>();
@@ -338,7 +339,7 @@ function fineTile(tr: number, tc: number): Promise<Uint8Array | null> {
 	const k = `${tr}_${tc}`;
 	let p = fineTiles.get(k);
 	if (!p) {
-		p = fetch(`/data/fine/${k}.bin`)
+		p = fetch(dataUrl(`/data/fine/${k}.bin`))
 			.then(async (r) => (r.ok ? new Uint8Array(await r.arrayBuffer()) : null))
 			.catch(() => null);
 		fineTiles.set(k, p);

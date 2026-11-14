@@ -5,6 +5,7 @@ export const T = {
 	en: {
 		panel: 'Site details',
 		expand: 'Expand panel',
+		moreBelow: 'More below',
 		collapse: 'Collapse panel',
 		slotA: 'Site A',
 		slotB: 'Site B',
@@ -97,6 +98,7 @@ export const T = {
 	uk: {
 		panel: 'Інформація про місце',
 		expand: 'Розгорнути панель',
+		moreBelow: 'Гортайте нижче',
 		collapse: 'Згорнути панель',
 		slotA: 'Місце A',
 		slotB: 'Місце B',

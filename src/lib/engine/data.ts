@@ -60,15 +60,16 @@ export interface Heatmap {
 	aggregate?: string;
 }
 
+import { dataUrl } from './dataurl.ts';
 const base = '/data';
 
 async function bin(path: string): Promise<ArrayBuffer> {
-	const r = await fetch(`${base}/${path}`);
+	const r = await fetch(dataUrl(`${base}/${path}`));
 	if (!r.ok) throw new Error(`${path}: ${r.status}`);
 	return r.arrayBuffer();
 }
 async function json<T>(path: string): Promise<T> {
-	const r = await fetch(`${base}/${path}`);
+	const r = await fetch(dataUrl(`${base}/${path}`));
 	if (!r.ok) throw new Error(`${path}: ${r.status}`);
 	return r.json();
 }

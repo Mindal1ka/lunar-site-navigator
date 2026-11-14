@@ -82,6 +82,7 @@
 	label={t.panel}
 	collapse={collapseTick}
 	expandLabel={t.expand}
+	moreLabel={t.moreBelow}
 	collapseLabel={t.collapse}
 >
 	{#snippet head()}

@@ -3,6 +3,8 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+	// data files are cached by the CDN for hours: every build gets its own ?v= so new data shows at once
+	define: { __DATA_V__: JSON.stringify(Date.now().toString(36)) },
 	plugins: [
 		sveltekit({
 			compilerOptions: {
