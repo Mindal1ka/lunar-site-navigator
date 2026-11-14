@@ -10,6 +10,7 @@
 	import TopBar from '#lib/components/TopBar.svelte';
 	import PlannerPanel from '#lib/components/PlannerPanel.svelte';
 	import { initUrlState } from '#lib/url.svelte.ts';
+	import { perf } from '#lib/perf.svelte.ts';
 
 	const T = {
 		en: { loading: 'Loading NASA LOLA terrain and JPL ephemerides', failed: 'Could not load data' },
@@ -18,6 +19,7 @@
 	const t = $derived(T[app.lang]);
 
 	onMount(() => {
+		perf.init();
 		app.load();
 		const stopUrl = initUrlState();
 		const stopSquares = app.startSquares();
