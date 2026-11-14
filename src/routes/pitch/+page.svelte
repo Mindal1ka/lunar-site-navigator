@@ -175,35 +175,37 @@
 	<div class="stage" bind:this={host} style:--s={scale}>
 		<!-- 1 · title -->
 		<section class="slide s1" class:on={print || cur === 0} data-i="0" aria-hidden={!print && cur !== 0}>
-			<img class="bgshot" src={img('hero')} alt="" />
-			<div class="veil"></div>
+			<img class="bgshot a fadein" src={dataUrl('/pitch/title.jpg')} alt="" />
+			<div class="shade"></div>
 			<svg class="sky" viewBox="0 0 1920 1080" aria-hidden="true">
-				{#each Array.from({ length: 70 }, (_, k) => k) as k (k)}
+				{#each Array.from({ length: 60 }, (_, k) => k) as k (k)}
 					<circle
 						cx={(k * 977) % 1920}
-						cy={(k * 613) % 640}
-						r={k % 7 === 0 ? 1.8 : 1.1}
+						cy={(k * 613) % 340}
+						r={k % 7 === 0 ? 1.7 : 1}
 						style:animation-delay={`${(k % 13) * 0.37}s`}
 						class="star"
 					/>
 				{/each}
 			</svg>
-			<div class="horizon" aria-hidden="true">
-				<div class="sunpath"><div class="sun"></div></div>
-			</div>
-			<div class="in">
-				<div class="kicker a" style:--d="0">{T.s1.kicker}</div>
+			<div class="top">
+				<div class="kicker a" style:--d="2">{T.s1.kicker}</div>
 				<h1>
-					<span class="line"><span class="a up" style:--d="1">{T.s1.title[0]}</span></span>
-					<span class="line"><span class="a up" style:--d="2">{T.s1.title[1]}</span></span>
+					<span class="line"><span class="a up" style:--d="3">{T.s1.title[0]}</span></span>
+					<span class="line"><span class="a up" style:--d="4">{T.s1.title[1]}</span></span>
 				</h1>
-				<p class="lead a" style:--d="4">
+			</div>
+			<div class="bottom">
+				<p class="lead a" style:--d="6">
 					{T.s1.lead[0]}<span class="sun-c">{T.s1.lead[1]}</span>{T.s1.lead[2]}<span class="earth-c">{T.s1.lead[3]}</span
 					>{T.s1.lead[4]}<span class="night-c">{T.s1.lead[5]}</span>{T.s1.lead[6]}
 				</p>
-				<div class="team a" style:--d="6">✦ IT STEP Poltava × Mindal1ka.com ✦</div>
-				<div class="url a" style:--d="7">space.mindal1ka.com</div>
+				<div class="meta a" style:--d="8">
+					<span class="team">✦ IT STEP Poltava × Mindal1ka.com ✦</span>
+					<span class="url">space.mindal1ka.com</span>
+				</div>
 			</div>
+			<p class="cap1 a" style:--d="10">{T.s1.cap}</p>
 		</section>
 
 		<!-- 2 · problem -->
@@ -679,12 +681,21 @@
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
-		opacity: 0.5;
 	}
-	.s1 .veil {
+	.on .a.fadein {
+		animation: fadeIn 1600ms ease-out 0ms both;
+	}
+	@keyframes fadeIn {
+		from { opacity: 0; }
+		to { opacity: 1; }
+	}
+	.s1 .shade {
 		position: absolute;
 		inset: 0;
-		background: linear-gradient(90deg, rgba(7, 10, 17, 0.97) 0%, rgba(7, 10, 17, 0.86) 42%, rgba(7, 10, 17, 0.15) 75%, rgba(7, 10, 17, 0.4) 100%);
+		background:
+			linear-gradient(180deg, rgba(4, 6, 10, 0.55) 0%, rgba(4, 6, 10, 0) 34%),
+			linear-gradient(0deg, rgba(5, 7, 12, 0.97) 0%, rgba(5, 7, 12, 0.88) 24%, rgba(5, 7, 12, 0.35) 48%, rgba(5, 7, 12, 0) 62%),
+			linear-gradient(90deg, rgba(5, 7, 12, 0.5) 0%, rgba(5, 7, 12, 0) 45%);
 	}
 	.sky {
 		position: absolute;
@@ -700,52 +711,35 @@
 	@keyframes tw {
 		50% { opacity: 0.9; }
 	}
-	.horizon {
+	.print .star {
+		opacity: 0.4;
+	}
+	.s1 .top {
 		position: absolute;
-		left: 0;
-		right: 0;
-		bottom: 150px;
-		height: 2px;
-		background: linear-gradient(90deg, transparent, rgba(255, 181, 71, 0.55) 30%, rgba(255, 181, 71, 0.55) 70%, transparent);
-		opacity: 0.6;
+		left: 96px;
+		top: 84px;
 	}
-	.sunpath {
+	.s1 h1 {
+		font-size: 108px;
+		margin: 0;
+		text-shadow: 0 4px 40px rgba(0, 0, 0, 0.6);
+	}
+	.s1 .bottom {
 		position: absolute;
-		inset: 0;
+		left: 96px;
+		right: 96px;
+		bottom: 92px;
 	}
-	.sun {
-		position: absolute;
-		top: -14px;
-		left: 0;
-		width: 28px;
-		height: 28px;
-		border-radius: 50%;
-		background: #fff3d6;
-		box-shadow: 0 0 30px 12px rgba(255, 181, 71, 0.75), 0 0 120px 50px rgba(255, 181, 71, 0.25);
-		animation: glide 26s linear infinite;
+	.s1 .lead {
+		max-width: 1180px;
 	}
-	/* the polar Sun: a full circle around the sky, never climbing more than a little */
-	@keyframes glide {
-		0% { transform: translate(-60px, 0); }
-		25% { transform: translate(480px, -26px); }
-		50% { transform: translate(960px, -40px); }
-		75% { transform: translate(1440px, -22px); }
-		100% { transform: translate(1980px, 0); }
-	}
-	.print .sun {
-		transform: translate(1380px, -26px);
-	}
-	.s1 .in {
-		position: relative;
-		height: 100%;
+	.s1 .meta {
 		display: flex;
-		flex-direction: column;
-		justify-content: center;
-		max-width: 1140px;
-		padding: 0 96px;
+		align-items: baseline;
+		gap: 48px;
+		margin-top: 40px;
 	}
 	.s1 .team {
-		margin-top: 60px;
 		font-size: 30px;
 	}
 	.s1 .url,
@@ -754,8 +748,15 @@
 		color: var(--sun);
 	}
 	.s1 .url {
-		margin-top: 30px;
 		font-size: 30px;
+	}
+	.cap1 {
+		position: absolute;
+		right: 96px;
+		bottom: 40px;
+		margin: 0;
+		font-size: 17px;
+		color: var(--dim);
 	}
 
 	/* 2 */

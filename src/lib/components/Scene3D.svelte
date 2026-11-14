@@ -311,6 +311,7 @@
 			return;
 		}
 		engine = eng;
+		if (location.search.includes('debug')) (window as unknown as { __eng: unknown }).__eng = eng; // inspection only
 		eng.setInsets(computeInsets());
 
 		const ro = new ResizeObserver(() => {

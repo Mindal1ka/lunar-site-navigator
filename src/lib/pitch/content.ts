@@ -29,7 +29,8 @@ export const PITCH = {
 				' and the ',
 				'longest night',
 				', computed from real NASA terrain and ephemerides.'
-			]
+			],
+			cap: 'Rendered by the app: NASA LOLA terrain around Shackleton crater; Earth placed from JPL ephemerides.'
 		},
 		s2: {
 			kicker: 'The problem',
@@ -132,7 +133,8 @@ export const PITCH = {
 				' і ',
 				'найдовша ніч',
 				', пораховані за справжнім рельєфом і ефемеридами NASA.'
-			]
+			],
+			cap: 'Кадр із застосунку: рельєф NASA LOLA біля кратера Шеклтона; положення Землі — з ефемерид JPL.'
 		},
 		s2: {
 			kicker: 'Проблема',
