@@ -1,0 +1,111 @@
+{
+ "horizons": {
+  "reference": "JPL Horizons API",
+  "sites": 3,
+  "epochs_per_site": 293,
+  "max_diff_arcsec": 0.0989211012239366
+ },
+ "lola_map": {
+  "reference": "NASA LOLA AVGVISIB_85S_060M_201608 (Sun, Earth), surface, 18.6 yr",
+  "points": 150,
+  "at_0m": {
+   "sun": {
+    "bias_pp": -0.29,
+    "mae_pp": 1.03,
+    "r": 0.965
+   },
+   "earth": {
+    "bias_pp": -0.15,
+    "mae_pp": 1.17,
+    "r": 0.98
+   }
+  },
+  "at_2m_control": {
+   "sun": {
+    "bias_pp": 0.69,
+    "mae_pp": 0.97,
+    "r": 0.97
+   },
+   "earth": {
+    "bias_pp": 1.05,
+    "mae_pp": 1.07,
+    "r": 0.983
+   }
+  }
+ },
+ "published_points": [
+  {
+   "site": "Connecting Ridge C1 (2 m)",
+   "height_m": 2.0,
+   "ours_pct": 86.44,
+   "published_pct": 88.0,
+   "diff_pct": -1.56,
+   "source": "Gläser 2018 Tab.2"
+  },
+  {
+   "site": "Connecting Ridge C2 (2 m)",
+   "height_m": 2.0,
+   "ours_pct": 78.03,
+   "published_pct": 78.1,
+   "diff_pct": -0.07,
+   "source": "Gläser 2018 Tab.2"
+  },
+  {
+   "site": "Shackleton rim S1 (2 m)",
+   "height_m": 2.0,
+   "ours_pct": 85.47,
+   "published_pct": 85.5,
+   "diff_pct": -0.03,
+   "source": "Gläser 2018 Tab.2"
+  },
+  {
+   "site": "Shackleton rim S2 (2 m)",
+   "height_m": 2.0,
+   "ours_pct": 75.42,
+   "published_pct": 82.1,
+   "diff_pct": -6.68,
+   "source": "Gläser 2018 Tab.2"
+  },
+  {
+   "site": "Connecting Ridge C1 (surface)",
+   "height_m": 0.0,
+   "ours_pct": 65.85,
+   "published_pct": 76.0,
+   "diff_pct": -10.15,
+   "source": "Gläser 2018 Tab.1"
+  },
+  {
+   "site": "Connecting Ridge C2 (surface)",
+   "height_m": 0.0,
+   "ours_pct": 67.27,
+   "published_pct": 75.6,
+   "diff_pct": -8.33,
+   "source": "Gläser 2018 Tab.1"
+  },
+  {
+   "site": "Shackleton rim (surface)",
+   "height_m": 0.0,
+   "ours_pct": 52.45,
+   "published_pct": 81.0,
+   "diff_pct": -28.55,
+   "source": "Gläser 2018 Tab.1"
+  },
+  {
+   "site": "EPSC2014 spot 1 (2 m)",
+   "height_m": 2.0,
+   "ours_pct": 86.52,
+   "published_pct": 88.1,
+   "diff_pct": -1.58,
+   "source": "Gläser EPSC2014; longest dark 4.58 d"
+  },
+  {
+   "site": "EPSC2014 spot 3 (10 m)",
+   "height_m": 10.0,
+   "ours_pct": 92.5,
+   "published_pct": 92.5,
+   "diff_pct": 0.0,
+   "source": "Gläser EPSC2014; longest dark 3.08 d"
+  }
+ ],
+ "note_0m": "At 0 m on sharp ridges, sub-pixel terrain changes sunlight by 10-18 pp; the app defaults to 2 m."
+}

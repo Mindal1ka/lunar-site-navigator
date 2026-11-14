@@ -1,0 +1,118 @@
+{
+ "overview": {
+  "x0_m": -210000.0,
+  "y0_m": 210000.0,
+  "step_m": 410.15625,
+  "size": 1024,
+  "min_m": -5669,
+  "max_m": 7022,
+  "source": "LOLA LDEM_80S_80M, box-filtered"
+ },
+ "tiles": {
+  "cabeus-b-peak": {
+   "x0_m": -191360.0,
+   "y0_m": 80480.0,
+   "step_m": 40.0,
+   "size": 512,
+   "source": "LOLA LDEM_80S_40M"
+  },
+  "haworth": {
+   "x0_m": -50480.0,
+   "y0_m": 101880.0,
+   "step_m": 40.0,
+   "size": 512,
+   "source": "LOLA LDEM_80S_40M"
+  },
+  "malapert-massif": {
+   "x0_m": -9600.0,
+   "y0_m": 131600.0,
+   "step_m": 40.0,
+   "size": 512,
+   "source": "LOLA LDEM_80S_40M"
+  },
+  "mons-mouton-plateau": {
+   "x0_m": 77800.0,
+   "y0_m": 159120.0,
+   "step_m": 40.0,
+   "size": 512,
+   "source": "LOLA LDEM_80S_40M"
+  },
+  "mons-mouton-nobile-rim-1": {
+   "x0_m": 70400.0,
+   "y0_m": 124160.0,
+   "step_m": 40.0,
+   "size": 512,
+   "source": "LOLA LDEM_80S_40M"
+  },
+  "nobile-rim-2": {
+   "x0_m": 147960.0,
+   "y0_m": 106440.0,
+   "step_m": 40.0,
+   "size": 512,
+   "source": "LOLA LDEM_80S_40M"
+  },
+  "de-gerlache-rim-2": {
+   "x0_m": -52000.0,
+   "y0_m": 28240.0,
+   "step_m": 40.0,
+   "size": 512,
+   "source": "LOLA LDEM_80S_40M"
+  },
+  "slater-plain": {
+   "x0_m": 63360.0,
+   "y0_m": -18000.0,
+   "step_m": 40.0,
+   "size": 512,
+   "source": "LOLA LDEM_80S_40M"
+  },
+  "im2-athena": {
+   "x0_m": 66880.0,
+   "y0_m": 148240.0,
+   "step_m": 40.0,
+   "size": 512,
+   "source": "LOLA LDEM_80S_40M"
+  },
+  "connecting-ridge-c1": {
+   "x0_m": -21800.0,
+   "y0_m": -2200.0,
+   "step_m": 40.0,
+   "size": 512,
+   "source": "LOLA LDEM_80S_40M"
+  },
+  "connecting-ridge-c2": {
+   "x0_m": -29280.0,
+   "y0_m": 1760.0,
+   "step_m": 40.0,
+   "size": 512,
+   "source": "LOLA LDEM_80S_40M"
+  },
+  "shackleton-rim": {
+   "x0_m": -13040.0,
+   "y0_m": 1160.0,
+   "step_m": 40.0,
+   "size": 512,
+   "source": "LOLA LDEM_80S_40M"
+  },
+  "nobile-rim-2-best": {
+   "x0_m": 143240.0,
+   "y0_m": 96360.0,
+   "step_m": 40.0,
+   "size": 512,
+   "source": "LOLA LDEM_80S_40M"
+  },
+  "shackleton-floor": {
+   "x0_m": -2560.0,
+   "y0_m": 3840.0,
+   "step_m": 40.0,
+   "size": 512,
+   "source": "LOLA LDEM_80S_40M"
+  },
+  "haworth-floor": {
+   "x0_m": -17200.0,
+   "y0_m": 87280.0,
+   "step_m": 40.0,
+   "size": 512,
+   "source": "LOLA LDEM_80S_40M"
+  }
+ }
+}
