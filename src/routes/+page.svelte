@@ -9,6 +9,7 @@
 	import SiteCard from '#lib/components/SiteCard.svelte';
 	import TopBar from '#lib/components/TopBar.svelte';
 	import PlannerPanel from '#lib/components/PlannerPanel.svelte';
+	import { initUrlState } from '#lib/url.svelte.ts';
 
 	const T = {
 		en: { loading: 'Loading NASA LOLA terrain and JPL ephemerides', failed: 'Could not load data' },
@@ -18,6 +19,7 @@
 
 	onMount(() => {
 		app.load();
+		const stopUrl = initUrlState();
 		// playback: advance the time cursor in real time while playing
 		let raf = 0;
 		let last = performance.now();
@@ -33,7 +35,10 @@
 			raf = requestAnimationFrame(tick);
 		};
 		raf = requestAnimationFrame(tick);
-		return () => cancelAnimationFrame(raf);
+		return () => {
+			cancelAnimationFrame(raf);
+			stopUrl();
+		};
 	});
 </script>
 
@@ -45,7 +50,7 @@
 	/>
 </svelte:head>
 
-<div class="app" class:planner={app.mode === 'planner'} class:panorama={app.view === 'panorama'}>
+<div class="app" class:mode-planner={app.mode === 'planner'} class:view-panorama={app.view === 'panorama'}>
 	<div class="stage">
 		{#if app.ready}
 			<div class="layer" class:hidden={app.view !== 'map'}><Scene3D /></div>
@@ -179,7 +184,7 @@
 			right: 0;
 			bottom: 0;
 			width: auto;
-			max-height: 62vh;
+			max-height: none;
 			z-index: 16;
 		}
 		.timeline {
@@ -190,7 +195,11 @@
 			height: var(--timeline-h);
 		}
 		.planner {
-			display: none;
+			left: var(--gutter);
+			right: var(--gutter);
+			top: calc(var(--topbar-h) + var(--timeline-h) + var(--gutter) * 3);
+			bottom: auto;
+			height: min(320px, 40vh);
 		}
 	}
 </style>

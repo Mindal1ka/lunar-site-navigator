@@ -31,3 +31,6 @@ __pycache__/
 # Local agent rules (not published)
 AGENTS.md
 CLAUDE.md
+
+# Agent worktrees
+/.claude/

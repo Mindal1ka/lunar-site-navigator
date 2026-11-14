@@ -32,6 +32,7 @@ export interface Site {
 }
 
 export interface SitesData {
+	dem?: string;
 	heights_m: number[];
 	n_az: number;
 	sites: Site[];

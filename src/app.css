@@ -32,6 +32,13 @@
 	--site-a: #ffffff;
 	--site-b: #c49bff;
 	--danger: #ff6b6b;
+
+	/* site categories (picker dots, markers, legends) */
+	--cat-artemis: #8fb3ff;
+	--cat-mission: #5fe0c8;
+	--cat-sunny: #ffe08a;
+	--cat-shadow: #8a86b8;
+	--cat-custom: #f59ac0;
 	--warning: #ffcf5c;
 
 	/* type */
@@ -144,6 +151,7 @@ button {
 	*::before,
 	*::after {
 		animation-duration: 1ms !important;
+		animation-iteration-count: 1 !important;
 		transition-duration: 1ms !important;
 	}
 }

@@ -135,8 +135,7 @@ class AppState {
 		i0 = Math.max(0, Math.min(Math.round(i0), max - 24));
 		i1 = Math.max(i0 + 24, Math.min(Math.round(i1), max));
 		this.win = { i0, i1 };
-		if (this.t < i0 || this.t >= i1) this.t = i0;
-		this.best = [];
+		this.t = Math.max(i0, Math.min(i1 - 1, this.t));
 	}
 
 	selectSite(id: string, slot: 'A' | 'B' = 'A') {
