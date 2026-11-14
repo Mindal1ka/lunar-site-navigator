@@ -72,7 +72,7 @@ export const PITCH = {
 				['04 · Result', 'Per hour, then per period', 'Visible share of the solar disk; Earth above the horizon + antenna margin.']
 			],
 			stat1: 'points: the 100 m map of the whole 420 × 420 km region; over an hour on two GPUs',
-			stat2: 'for the 1 km overview map (176 thousand points) on one GPU, vs several hours on a CPU',
+			stat2: 'for the 1 km overview map (176 thousand points) on one GPU',
 			min: 'min'
 		},
 		s5: {
@@ -184,7 +184,7 @@ export const PITCH = {
 				['04 · Результат', 'Щогодини, потім за період', 'Видима частка сонячного диска; Земля над горизонтом + запас антени.']
 			],
 			stat1: 'точок: карта 100 м усього регіону 420 × 420 км; понад годину на двох відеокартах',
-			stat2: 'на оглядову карту 1 км (176 тисяч точок) на одній відеокарті замість кількох годин на процесорі',
+			stat2: 'на оглядову карту 1 км (176 тисяч точок) на одній відеокарті',
 			min: 'хв'
 		},
 		s5: {
