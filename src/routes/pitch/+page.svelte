@@ -625,6 +625,15 @@
 		line-height: 1;
 		margin: 0 0 40px;
 	}
+	h1,
+	h2,
+	.lead {
+		text-wrap: balance;
+	}
+	.slide p,
+	.card span {
+		text-wrap: pretty;
+	}
 	h2 {
 		font-size: 62px;
 		line-height: 1.08;
@@ -814,8 +823,9 @@
 		right: 96px;
 		bottom: 40px;
 		margin: 0;
-		font-size: 17px;
-		color: var(--dim);
+		font-size: 18px;
+		color: var(--muted);
+		text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8);
 	}
 
 	/* 2 */
@@ -831,7 +841,7 @@
 		gap: 14px;
 	}
 	.s2 .q {
-		padding: 18px 28px;
+		padding: 16px 28px;
 	}
 	.case {
 		margin: 22px 0 0;
@@ -855,7 +865,7 @@
 	}
 	.callout {
 		margin: 22px 0 0;
-		font-size: 26px;
+		font-size: 29px;
 		line-height: 1.45;
 		color: #c9d0db;
 	}
@@ -864,6 +874,9 @@
 	}
 	.s2 .frame {
 		height: 560px;
+	}
+	.s2 .frame .shot {
+		object-position: 50% 100%; /* keep the azimuth axis, trim empty sky */
 	}
 	.cap {
 		margin-top: 16px;
@@ -885,8 +898,10 @@
 		right: 96px;
 		top: 250px;
 		width: 440px;
+		height: 703px; /* same as the screenshot: top and bottom edges line up */
 		display: flex;
 		flex-direction: column;
+		justify-content: space-between;
 		gap: 14px;
 	}
 	.s3 .side .card {
@@ -910,7 +925,7 @@
 		margin-top: 44px;
 	}
 	.step {
-		min-height: 270px;
+		min-height: 250px;
 	}
 	.step .tag {
 		font-family: var(--font-mono);
@@ -923,6 +938,7 @@
 		font-size: 31px;
 		margin: 14px 0 12px;
 		line-height: 1.15;
+		min-height: 2.3em; /* two title lines in every card, so the bodies start level */
 	}
 	.step span {
 		font-size: 22px;
@@ -949,8 +965,8 @@
 		content: '';
 		position: absolute;
 		right: -2px;
-		top: -5px;
-		border: 6px solid transparent;
+		top: -8px;
+		border: 9px solid transparent;
 		border-left-color: var(--sun);
 		border-right: 0;
 	}
@@ -960,13 +976,13 @@
 	.s4 .row {
 		display: grid;
 		grid-template-columns: 1fr 760px;
-		gap: 48px;
-		margin-top: 32px;
+		gap: 34px;
+		margin-top: 34px;
 	}
 	.stats {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
-		gap: 24px;
+		gap: 34px;
 	}
 	.stats .card {
 		min-height: 330px;
@@ -990,7 +1006,12 @@
 		display: grid;
 		grid-template-columns: 1fr 1fr;
 		gap: 40px;
-		margin-top: 64px;
+		margin-top: 84px;
+	}
+	.s5 .grid > div:first-child {
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between; /* note ends level with the table card */
 	}
 	.res {
 		display: flex;
@@ -1006,7 +1027,7 @@
 		margin-bottom: 14px;
 	}
 	.note {
-		margin: 40px 0 0;
+		margin: 40px 0 6px;
 		font-size: 25px;
 		color: var(--muted);
 		line-height: 1.5;
@@ -1034,7 +1055,7 @@
 	}
 	th {
 		font-weight: 500;
-		color: var(--dim);
+		color: var(--muted);
 		font-size: 18px;
 		text-transform: uppercase;
 		letter-spacing: 0.08em;
@@ -1048,16 +1069,21 @@
 	}
 
 	/* 6 */
-	.s6 .left {
+	.s6 > .left {
 		width: 600px;
+		height: 896px; /* down to the bottom edge of the screenshots */
+		display: flex;
+		flex-direction: column;
 	}
 	.s6 h2 {
 		font-size: 58px;
 	}
 	.feat {
 		margin-top: 36px;
+		flex: 1;
 		display: flex;
 		flex-direction: column;
+		justify-content: space-between;
 		gap: 18px;
 	}
 	.feat .card {
@@ -1077,25 +1103,22 @@
 		right: 96px;
 		top: 96px;
 		width: 1060px;
-		height: 470px;
+		height: 273px; /* the chart panel at its own aspect, nothing cut */
 	}
 	.s6 .p2 {
 		position: absolute;
 		right: 96px;
-		top: 596px;
+		top: 399px;
 		width: 1060px;
-		height: 384px;
-	}
-	.s6 .p2 .shot {
-		object-position: 50% 32%;
+		height: 581px;
 	}
 
 	/* 7 */
 	.s7 .grid {
 		display: grid;
-		grid-template-columns: 1fr 1fr 420px;
+		grid-template-columns: 1fr 1fr 360px;
 		gap: 36px;
-		margin-top: 80px;
+		margin-top: 130px;
 	}
 	.s7 h3 {
 		font-size: 34px;
@@ -1117,7 +1140,8 @@
 		font-weight: 600;
 	}
 	.s7 li.mono {
-		font-size: 22px;
+		font-size: 24px;
+		color: var(--text);
 	}
 	.try {
 		text-align: center;
