@@ -42,12 +42,10 @@ class Perf {
 		if (q === 'low' || q === 'medium' || q === 'high') this.forced = q;
 		const cores = navigator.hardwareConcurrency ?? 8;
 		this.tier = this.forced ?? (this.software ? 'low' : cores <= 4 ? 'medium' : 'high');
-		$effect.root(() => {
-			$effect(() => {
-				const el = document.documentElement;
-				for (const t of ORDER) el.classList.toggle(`perf-${t}`, t === this.tier);
-			});
-		});
+		// the page style follows the tier chosen at load only: switching it at runtime would
+		// visibly change the panels while the user is looking at them
+		const el = document.documentElement;
+		for (const t of ORDER) el.classList.toggle(`perf-${t}`, t === this.tier);
 	}
 
 	/** step the tier down (true) or up (false); ignored when forced */

@@ -148,17 +148,21 @@ class AppState {
 			this.nowIndex = now;
 			if (this.preset !== 'custom') this.setPreset(this.preset, now);
 			if (this.t < this.win.i0 || this.t >= this.win.i1) this.t = this.win.i0;
-			// heat maps are off by default: fetch them after the first view has settled, not during startup
-			const heat = () => {
-				loadHeatmap().then((h) => (this.heatmap = h)).catch(() => {});
-				loadHeatmap('heatmap_max').then((h) => (this.heatmapMax = h)).catch(() => {});
-			};
-			if (/[?&]heat=/.test(location.search)) heat();
-			else if ('requestIdleCallback' in window) requestIdleCallback(heat, { timeout: 4000 });
-			else setTimeout(heat, 2500);
+			// heat maps are off by default: fetched after the intro fly-in (see loadHeatmaps), not
+			// during startup, unless the link asks for one
+			if (/[?&]heat=/.test(location.search)) this.loadHeatmaps();
 		} catch (e) {
 			this.loadError = e instanceof Error ? e.message : String(e);
 		}
+	}
+
+	private heatRequested = false;
+	/** Fetch the heat maps once (called by the 3D view when its intro has finished). */
+	loadHeatmaps() {
+		if (this.heatRequested) return;
+		this.heatRequested = true;
+		loadHeatmap().then((h) => (this.heatmap = h)).catch(() => {});
+		loadHeatmap('heatmap_max').then((h) => (this.heatmapMax = h)).catch(() => {});
 	}
 
 	setPreset(p: Preset, start = this.win.i0) {

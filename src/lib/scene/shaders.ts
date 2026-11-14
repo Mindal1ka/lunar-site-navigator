@@ -119,6 +119,7 @@ uniform vec2 uSq1Info;
 uniform vec4 uBest0;     // best landing cell centre mx, my (km), cell (km), alpha
 uniform vec4 uBest1;
 uniform float uSlopeLimit; // lander slope limit (deg): steeper cells are hatched on the slope layer
+uniform float uSteps; // ray-march budget of the current quality tier (<= STEPS, changes without a recompile)
 in vec2 vM;
 in vec3 vW;
 
@@ -133,10 +134,11 @@ float diskFrac(float u) {
 // surface, track the lowest clearance angle (rad) of the ray over the true terrain.
 float sunVisible(vec3 P, vec3 L, float w) {
 	float t = mix(0.62, 0.065, w);
-	float g = pow(330.0 / t, 1.0 / float(STEPS));
+	float g = pow(330.0 / t, 1.0 / uSteps);
 	t *= pow(g, ign(gl_FragCoord.xy));
 	float cmin = 1.0;
 	for (int i = 0; i < STEPS; i++) {
+		if (float(i) >= uSteps) break;
 		vec3 q = P + L * t;
 		float alt;
 		vec2 mq = toMap(q, alt);

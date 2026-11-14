@@ -35,7 +35,7 @@
 			aggCentre: 'Cell centre',
 			aggMax: 'Best in cell',
 			aggLine: { centre: 'value at the cell centre', max: 'best of 10 × 10 cells of 100 m' } as Record<string, string>,
-			slopeSrc: 'Detail squares: LOLA 40 m, over 80 m. Elsewhere: approximate, from the 3D terrain.',
+			slopeSrc: 'Detail squares: steepest 80 m plane within each 100 m cell (LOLA 40 m). Elsewhere: approximate, from the 3D terrain.',
 			slopeLimit: (d: number) => `Lander slope limit ${d}°: steeper cells hatched`,
 			sqLine: (p: string) => `Detail squares: 100 m cells, same method as the card, ${p}`,
 			sqFast: (h: number) => `Provisional detail: fast map method, 100 m cells, ${h} m`,
@@ -99,7 +99,7 @@
 			aggCentre: 'Центр комірки',
 			aggMax: 'Найкраще в комірці',
 			aggLine: { centre: 'значення в центрі комірки', max: 'найкраще з 10 × 10 комірок по 100 м' } as Record<string, string>,
-			slopeSrc: 'Детальні квадрати: LOLA 40 м, на відрізку 80 м. Деінде — приблизно, з 3D-рельєфу.',
+			slopeSrc: 'Детальні квадрати: найкрутіша площина 80 м у межах комірки 100 м (LOLA 40 м). Деінде — приблизно, з 3D-рельєфу.',
 			slopeLimit: (d: number) => `Межа нахилу для посадки ${d}°: крутіші комірки заштриховано`,
 			sqLine: (p: string) => `Детальні квадрати: комірки 100 м, той самий метод, що й у картці, ${p}`,
 			sqFast: (h: number) => `Попередня деталізація: швидкий метод карти, комірки 100 м, ${h} м`,
@@ -307,6 +307,7 @@
 			});
 		} catch {
 			noGl = true;
+			app.loadHeatmaps();
 			return;
 		}
 		engine = eng;
@@ -457,7 +458,8 @@
 		const ready = !!app.overview;
 		const sites = [app.siteA ?? null, app.siteB];
 		app.customTiles;
-		if (!eng || !ready) return;
+		// the 40 m tiles fade in after the intro: uploading them mid-flight costs frames
+		if (!eng || !ready || !introDone) return;
 		untrack(() => {
 			sites.forEach((s, i) => {
 				const slot = i as 0 | 1;
@@ -488,7 +490,10 @@
 				introStarted = true;
 				lastSel = key;
 				const pose = eng.framing(framePose(), { theta: sunTheta() + Math.PI + 0.5, phi: 1.22, minRadius: 36 });
-				eng.intro(pose).then(() => (introDone = true));
+				eng.intro(pose).then(() => {
+					introDone = true;
+					app.loadHeatmaps();
+				});
 				return;
 			}
 			if (key === lastSel) return;
@@ -720,6 +725,7 @@
 	});
 
 	function setHeat(l: HeatLayer) {
+		app.loadHeatmaps();
 		if (l !== 'off' && l !== 'slope' && !heatReady) return;
 		app.heatLayer = l;
 	}

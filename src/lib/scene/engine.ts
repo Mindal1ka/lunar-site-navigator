@@ -72,6 +72,10 @@ interface Flight {
 	to: Pose;
 	t0: number;
 	dur: number;
+	/** flight clock (ms): advances by at most 50 ms per tick, so a stalled frame slows the
+	 *  flight for a moment instead of making the camera jump */
+	el: number;
+	last: number;
 	lift: number;
 	intro: boolean;
 	resolve?: () => void;
@@ -140,7 +144,6 @@ export class SceneEngine {
 	private scale = 1;
 	private maxScale = 1;
 	private tier: Tier = 'high';
-	private terrainMats: THREE.ShaderMaterial[] = [];
 	private frameTimes: number[] = [];
 	private slowWindows = 0;
 	private fastWindows = 0;
@@ -148,6 +151,8 @@ export class SceneEngine {
 	 *  (software WebGL has no back-pressure, so frames would pile up into multi-second stalls) */
 	private fence: WebGLSync | null = null;
 	private compiling = false;
+	private needResize = false;
+	private lastScaleChange = 0;
 	private heatTo: HeatIndex = 0;
 	private lost = false;
 	private destroyed = false;
@@ -159,6 +164,8 @@ export class SceneEngine {
 		this.opts = opts;
 		this.canvas = document.createElement('canvas');
 		this.canvas.className = 'scene-canvas';
+		this.canvas.style.width = '100%'; // CSS size is set once; only the drawing buffer is resized
+		this.canvas.style.height = '100%';
 		container.prepend(this.canvas);
 
 		this.renderer = new THREE.WebGLRenderer({
@@ -188,6 +195,7 @@ export class SceneEngine {
 
 		const half = 210;
 		this.U = {
+			uSteps: { value: this.stepsFor(perf.tier) },
 			uR: { value: R_KM },
 			uHalf: { value: half },
 			uOv: { value: this.placeholder },
@@ -334,33 +342,39 @@ export class SceneEngine {
 	}
 
 	private terrainMaterial(role: number, rect: THREE.Vector4): THREE.ShaderMaterial {
-		const t = TIER[this.tier];
-		const steps = this.opts.mobile ? t.mobileSteps : t.steps;
 		const mat = new THREE.ShaderMaterial({
 			vertexShader: TERRAIN_VERT,
 			fragmentShader: TERRAIN_FRAG,
 			uniforms: { ...this.U, uRole: { value: role }, uMesh: { value: rect } },
-			defines: { STEPS: steps },
+			defines: { STEPS: this.opts.mobile ? TIER.high.mobileSteps : TIER.high.steps },
 			side: THREE.DoubleSide
 		});
-		this.terrainMats.push(mat);
-		mat.addEventListener('dispose', () => (this.terrainMats = this.terrainMats.filter((m) => m !== mat)));
 		return mat;
 	}
 
-	/** Switch the rendering budget (called by the frame-time governor). */
+	private stepsFor(t: Tier) {
+		return this.opts.mobile ? TIER[t].mobileSteps : TIER[t].steps;
+	}
+
+	/** Switch the rendering budget (called by the frame-time governor). Only uniforms and the
+	 *  resolution change, so the switch never recompiles a shader or stalls a frame. */
 	private applyTier(t: Tier) {
 		if (t === this.tier) return;
 		this.tier = t;
 		const cfg = TIER[t];
 		this.maxScale = cfg.maxScale;
-		this.scale = Math.min(Math.max(this.scale, cfg.minScale), cfg.maxScale);
-		const steps = this.opts.mobile ? cfg.mobileSteps : cfg.steps;
-		for (const m of this.terrainMats) {
-			m.defines.STEPS = steps;
-			m.needsUpdate = true;
-		}
-		this.resize();
+		this.setScale(Math.min(Math.max(this.scale, cfg.minScale), cfg.maxScale));
+		this.U.uSteps.value = this.stepsFor(t);
+		this.invalidate();
+	}
+
+	/** Request a new render scale; applied right before the next drawn frame (see tick), so the
+	 *  cleared drawing buffer of a resize is never shown on its own (that was the flicker). */
+	private setScale(s: number) {
+		if (Math.abs(s - this.scale) < 1e-3) return;
+		this.scale = s;
+		this.needResize = true;
+		this.invalidate();
 	}
 
 	setOverview(g: Grid & { min_m?: number; max_m?: number }) {
@@ -386,7 +400,12 @@ export class SceneEngine {
 			// link the big terrain shader off the main thread (KHR_parallel_shader_compile) before
 			// the first frame, instead of freezing the page for ~1.4 s on the first render
 			this.compiling = true;
-			Promise.all([this.renderer.compileAsync(this.scene, this.camera), this.renderer.compileAsync(this.sky, this.skyCam)])
+			this.renderer.initTexture(tex); // upload the height map now, not in the first intro frame
+			// (with a time limit: on a lost context the readiness poll would never settle)
+			Promise.race([
+				Promise.all([this.renderer.compileAsync(this.scene, this.camera), this.renderer.compileAsync(this.sky, this.skyCam)]),
+				new Promise((r) => setTimeout(r, 4000))
+			])
 				.catch(() => {})
 				.finally(() => {
 					this.compiling = false;
@@ -649,7 +668,7 @@ export class SceneEngine {
 		const to2 = { ...to, theta: from.theta + dTheta };
 		const lift = o.intro ? 0 : Math.min(1.2, dist / Math.max(20, Math.min(from.radius, to.radius)) * 0.35);
 		return new Promise((resolve) => {
-			this.flight = { from, to: to2, t0: performance.now() + (o.delay ?? 0), dur, lift, intro: !!o.intro, resolve };
+			this.flight = { from, to: to2, t0: performance.now() + (o.delay ?? 0), dur, el: 0, last: -Infinity, lift, intro: !!o.intro, resolve };
 			this.invalidate();
 		});
 	}
@@ -674,7 +693,9 @@ export class SceneEngine {
 	private stepFlight(now: number) {
 		const f = this.flight;
 		if (!f) return;
-		const raw = f.dur <= 0 ? 1 : Math.max(0, Math.min(1, (now - f.t0) / f.dur));
+		if (now > f.t0) f.el += Math.min(50, now - Math.max(f.last, f.t0));
+		f.last = now;
+		const raw = f.dur <= 0 ? 1 : Math.max(0, Math.min(1, f.el / f.dur));
 		let pose: Pose;
 		if (f.intro) {
 			// descend first, then tilt towards the horizon and settle
@@ -714,23 +735,32 @@ export class SceneEngine {
 		return { w: Math.max(1, w - this.insets.left - this.insets.right), h: Math.max(1, h - this.insets.top - this.insets.bottom) };
 	}
 
+	/** Size or insets changed: the camera follows at once, the drawing buffer is resized right
+	 *  before the next drawn frame (a buffer resize clears it, so it must never be shown empty). */
 	resize() {
 		const r = this.container.getBoundingClientRect();
 		const w = Math.max(1, Math.round(r.width));
 		const h = Math.max(1, Math.round(r.height));
 		this.size = { w, h };
-		this.renderer.setPixelRatio(this.baseDpr * this.scale);
-		this.renderer.setSize(w, h, false);
-		this.canvas.style.width = '100%';
-		this.canvas.style.height = '100%';
 		this.camera.aspect = w / h;
 		const dx = (this.insets.right - this.insets.left) / 2;
 		const dy = (this.insets.bottom - this.insets.top) / 2;
 		if (dx || dy) this.camera.setViewOffset(w, h, dx, dy, w, h);
 		else this.camera.clearViewOffset();
 		this.camera.updateProjectionMatrix();
-		(this.stars.material as THREE.ShaderMaterial).uniforms.uPx.value = this.baseDpr * this.scale;
+		this.needResize = true;
 		this.invalidate();
+	}
+
+	private applySize() {
+		const { w, h } = this.size;
+		const px = this.baseDpr * this.scale;
+		// three's setSize rewrites canvas.width even when unchanged, which clears it: skip no-ops
+		if (this.canvas.width !== Math.floor(w * px) || this.canvas.height !== Math.floor(h * px)) {
+			this.renderer.setPixelRatio(px);
+			this.renderer.setSize(w, h, false);
+		}
+		(this.stars.material as THREE.ShaderMaterial).uniforms.uPx.value = px;
 	}
 
 	// ------------------------------------------------------------------ picking / projection
@@ -815,9 +845,19 @@ export class SceneEngine {
 		const now = performance.now();
 		if (this.destroyed) return;
 		this.raf = requestAnimationFrame(this.tick);
-		const dt = Math.min(0.1, (now - this.last) / 1000);
+		const gap = now - this.last;
+		const dt = Math.min(0.1, gap / 1000);
 		this.last = now;
 		if (this.lost || !this.visible) return;
+		if (this.compiling) {
+			// shaders are still linking: hold the intro (flight and fades) instead of letting it run unseen
+			if (this.flight) {
+				this.flight.t0 += gap;
+				this.flight.last = now;
+			}
+			for (const tw of this.tweens.values()) tw.t0 += gap;
+			return;
+		}
 
 		let moving = false;
 		if (this.flight) {
@@ -844,12 +884,9 @@ export class SceneEngine {
 		}
 		if (!this.dirty) {
 			// refine: after motion stops, draw once at the tier's full resolution
-			if (this.scale < this.maxScale && now - this.lastMotion > 320) {
-				this.scale = this.maxScale;
-				this.resize();
-			} else return;
+			if (this.scale < this.maxScale && now - this.lastMotion > 320) this.setScale(this.maxScale);
+			else return;
 		}
-		if (this.compiling) return;
 		const gl = this.renderer.getContext() as WebGL2RenderingContext;
 		if (this.fence) {
 			// the previous frame is still on the GPU: skip this one (state keeps animating)
@@ -858,6 +895,12 @@ export class SceneEngine {
 			this.fence = null;
 		}
 		this.dirty = false;
+		// a resize clears the drawing buffer: do it only here, immediately followed by a draw
+		if (this.needResize) {
+			this.needResize = false;
+			this.applySize();
+			this.dirty = false;
+		}
 		this.keepAboveGround();
 		this.render();
 		this.fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
@@ -893,21 +936,25 @@ export class SceneEngine {
 		const span = (this.frameTimes[n - 1] - this.frameTimes[0]) / (n - 1);
 		this.frameTimes.length = 0;
 		const cfg = TIER[this.tier];
-		if (span > 24 && this.scale > cfg.minScale + 0.01) {
-			this.scale = Math.max(cfg.minScale, this.scale * 0.75);
-			this.resize();
-		} else if (span < 15 && this.scale < this.maxScale) {
-			this.scale = Math.min(this.maxScale, this.scale / 0.75);
-			this.resize();
+		// resolution steps at most every 600 ms, so a fly-in or a busy moment does not make the
+		// picture pump between sharp and soft
+		if (now - this.lastScaleChange > 600) {
+			if (span > 24 && this.scale > cfg.minScale + 0.01) {
+				this.setScale(Math.max(cfg.minScale, this.scale * 0.8));
+				this.lastScaleChange = now;
+			} else if (span < 14 && this.scale < this.maxScale) {
+				this.setScale(Math.min(this.maxScale, this.scale / 0.8));
+				this.lastScaleChange = now;
+			}
 		}
 		// governor: sustained slow frames at the lowest resolution -> cheaper tier (and back, with hysteresis)
 		this.slowWindows = span > 40 && this.scale <= cfg.minScale + 0.01 ? this.slowWindows + 1 : 0;
 		this.fastWindows = span < 12 && this.scale >= this.maxScale - 0.01 ? this.fastWindows + 1 : 0;
-		if (this.slowWindows >= 2) {
+		if (this.slowWindows >= 3) {
 			this.slowWindows = 0;
 			perf.step(true);
 			this.applyTier(perf.tier);
-		} else if (this.fastWindows >= 6 && !perf.software) {
+		} else if (this.fastWindows >= 8 && !perf.software) {
 			this.fastWindows = 0;
 			perf.step(false);
 			this.applyTier(perf.tier);
@@ -1000,12 +1047,14 @@ export class SceneEngine {
 		e.preventDefault();
 		this.lost = true;
 		this.fence = null; // syncs die with the context
+		this.compiling = false;
 		this.opts.onContextLost();
 	};
 
 	private onRestored = () => {
 		this.lost = false;
 		this.fence = null;
+		this.compiling = false;
 		for (const t of [this.ovTex, this.heatTex, this.placeholder, ...this.detailTex, ...this.sqTex]) if (t) t.needsUpdate = true;
 		this.resize();
 		this.opts.onContextRestored();

@@ -48,7 +48,7 @@
 			brightest: (sun: string, slope: string) => `Brightest cell: ${sun} Sun, but slope ${slope}`,
 			whyBest:
 				'Why not the brightest point? The sunniest cells are usually sharp ridge crests and peaks. They are too steep or too narrow for a lander, so the best landing spot trades a little sunlight for level ground.',
-			method: 'Same method as the card: LOLA 40 m horizon from each 100 m cell; slope from LOLA 40 m over 80 m.',
+			method: 'Same method as the card: LOLA 40 m horizon from each 100 m cell; slope = steepest 80 m plane within each 100 m cell (LOLA 40 m).',
 			methodFast: 'Fast map method: LOLA 80 m, 720 azimuths, rays to 150 km (provisional until the exact map arrives).',
 			job: {
 				queued: (pos: number, eta: string) => `Detailed 10 km map: queued (#${pos}), ${eta}`,
@@ -95,7 +95,7 @@
 			brightest: (sun: string, slope: string) => `Найосвітленіша комірка: Сонце ${sun}, але нахил ${slope}`,
 			whyBest:
 				'Чому не найосвітленіша точка? Найсонячніші комірки — зазвичай гострі гребені й піки. Вони надто круті або вузькі для апарата, тож найкраще місце посадки міняє трохи світла на рівний ґрунт.',
-			method: 'Той самий метод, що й у картці: горизонт LOLA 40 м з кожної комірки 100 м; нахил — LOLA 40 м на відрізку 80 м.',
+			method: 'Той самий метод, що й у картці: горизонт LOLA 40 м з кожної комірки 100 м; нахил — найкрутіша площина 80 м у межах кожної комірки 100 м (LOLA 40 м).',
 			methodFast: 'Швидкий метод карти: LOLA 80 м, 720 азимутів, промені до 150 км (попередньо, доки не готова точна карта).',
 			job: {
 				queued: (pos: number, eta: string) => `Детальна карта 10 км: у черзі (№${pos}), ${eta}`,
