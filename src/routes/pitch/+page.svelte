@@ -11,6 +11,9 @@
 	const N = 7;
 	const params = typeof location !== 'undefined' ? new URLSearchParams(location.search) : new URLSearchParams();
 	const print = params.get('print') === '1';
+	/** print only: extra first slide pointing to the live, animated version */
+	const note = print && params.get('note') === '1';
+	let addLink = $state(false);
 	let lang = $state<PitchLang>(params.get('lang') === 'uk' ? 'uk' : 'en');
 	let cur = $state(Math.min(N - 1, Math.max(0, Number(params.get('s') ?? 1) - 1 || 0)));
 	let scale = $state(1);
@@ -22,7 +25,8 @@
 	const T = $derived(PITCH[lang]);
 	const img = (n: string) => dataUrl(`/pitch/${lang}/${n}.jpg`);
 	const num = (v: number, d = 1) => v.toLocaleString(lang === 'uk' ? 'uk-UA' : 'en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
-	const files = (l: PitchLang, ext: 'pdf' | 'pptx') => dataUrl(`/pitch/lunar-landing-site-navigator-${l}.${ext}`);
+	const files = (l: PitchLang, ext: 'pdf' | 'pptx', link: boolean) =>
+		dataUrl(`/pitch/lunar-landing-site-navigator-${l}${link ? '-link' : ''}.${ext}`);
 
 	// Gläser et al. 2018 / EPSC 2014 vs ours (static/data/validation.json)
 	const TABLE = [
@@ -173,6 +177,22 @@
 	ontouchend={touchEnd}
 >
 	<div class="stage" bind:this={host} style:--s={scale}>
+		{#if note}
+			<!-- 0 · link to the live version (exported files only) -->
+			<section class="slide s0 on" data-i="-1">
+				<div class="kicker">{T.s0.kicker}</div>
+				<h2>{T.s0.title}</h2>
+				<div class="row0">
+					<div>
+						<p class="lead">{T.s0.text}</p>
+						<div class="link0">https://space.mindal1ka.com/pitch</div>
+						<p class="small">{T.s0.sub}</p>
+					</div>
+					<div class="qr"><img src="/pitch/qr-pitch.svg" alt="QR: https://space.mindal1ka.com/pitch" /></div>
+				</div>
+			</section>
+		{/if}
+
 		<!-- 1 · title -->
 		<section class="slide s1" class:on={print || cur === 0} data-i="0" aria-hidden={!print && cur !== 0}>
 			<img class="bgshot a fadein" src={dataUrl('/pitch/title.jpg')} alt="" />
@@ -401,10 +421,14 @@
 				</button>
 				{#if menu}
 					<div class="menu" role="menu">
+						<label class="chk">
+							<input type="checkbox" bind:checked={addLink} />
+							<span>{T.ui.addLink}</span>
+						</label>
 						{#each ['pdf', 'pptx'] as const as ext (ext)}
 							<div class="mh">{ext === 'pdf' ? T.ui.pdf : T.ui.pptx}</div>
 							{#each ['en', 'uk'] as const as l (l)}
-								<a role="menuitem" href={files(l, ext)} download onclick={() => (menu = false)}>
+								<a role="menuitem" href={files(l, ext, addLink)} download onclick={() => (menu = false)}>
 									<span>{T.ui.langName[l]}</span><em>.{ext}</em>
 								</a>
 							{/each}
@@ -669,6 +693,30 @@
 		font-weight: 600;
 		line-height: 1;
 		font-variant-numeric: tabular-nums;
+	}
+
+	/* 0 (exported files only) */
+	.s0 h2 {
+		font-size: 76px;
+		margin-top: 8px;
+	}
+	.row0 {
+		display: grid;
+		grid-template-columns: 1fr 420px;
+		gap: 80px;
+		align-items: center;
+		margin-top: 110px;
+	}
+	.link0 {
+		margin: 28px 0 30px;
+		font-family: var(--font-mono);
+		font-size: 50px;
+		color: var(--sun);
+	}
+	.s0 .qr {
+		width: 420px;
+		height: 420px;
+		margin: 0;
 	}
 
 	/* 1 */
@@ -1243,6 +1291,23 @@
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
 		color: var(--dim);
+	}
+	.chk {
+		display: flex;
+		gap: 10px;
+		align-items: flex-start;
+		max-width: 260px;
+		padding: 8px 10px 10px;
+		margin-bottom: 4px;
+		border-bottom: 1px solid var(--line);
+		font-size: 13px;
+		line-height: 1.35;
+		color: var(--muted);
+		cursor: pointer;
+	}
+	.chk input {
+		margin-top: 2px;
+		accent-color: var(--sun);
 	}
 	.menu a {
 		display: flex;

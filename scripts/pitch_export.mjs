@@ -1,6 +1,7 @@
 // AI-assisted: written with Claude, reviewed by the team.
 // Renders the /pitch page of a running site (print mode: all slides, final state, no controls)
-// to static/pitch/lunar-landing-site-navigator-<lang>.pdf and per-slide PNGs, then builds the
+// to static/pitch/lunar-landing-site-navigator-<lang>[-link].pdf (-link: with a first slide that
+// points to the live version) and per-slide PNGs, then builds the
 // .pptx (one full-slide picture per slide) with scripts/pitch_pptx.py.
 // usage: node scripts/pitch_export.mjs [http://127.0.0.1:44000] [chrome-or-headless-shell.exe]
 import { spawn, spawnSync } from 'node:child_process';
@@ -28,8 +29,9 @@ await send('Page.enable');
 await send('Runtime.enable');
 await send('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
 
-for (const lang of ['en', 'uk']) {
-	await send('Page.navigate', { url: `${BASE}/pitch?print=1&lang=${lang}` });
+for (const lang of ['en', 'uk']) for (const link of [false, true]) {
+	const sfx = `${lang}${link ? '-link' : ''}`;
+	await send('Page.navigate', { url: `${BASE}/pitch?print=1&lang=${lang}${link ? '&note=1' : ''}` });
 	await sleep(1500);
 	await send('Runtime.evaluate', {
 		expression: `(async()=>{await document.fonts.ready;await Promise.all([...document.images].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));return 1})()`,
@@ -38,8 +40,8 @@ for (const lang of ['en', 'uk']) {
 	await sleep(800);
 	const n = (await send('Runtime.evaluate', { expression: 'document.querySelectorAll(".slide").length', returnByValue: true })).result.value;
 	const pdf = await send('Page.printToPDF', { printBackground: true, paperWidth: 20, paperHeight: 11.25, marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0, preferCSSPageSize: false });
-	writeFileSync(join(OUT, `lunar-landing-site-navigator-${lang}.pdf`), Buffer.from(pdf.data, 'base64'));
-	const dir = join(tmpdir(), `pitch-png-${lang}`);
+	writeFileSync(join(OUT, `lunar-landing-site-navigator-${sfx}.pdf`), Buffer.from(pdf.data, 'base64'));
+	const dir = join(tmpdir(), `pitch-png-${sfx}`);
 	mkdirSync(dir, { recursive: true });
 	await send('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
 	for (let i = 0; i < n; i++) {
@@ -47,10 +49,10 @@ for (const lang of ['en', 'uk']) {
 		writeFileSync(join(dir, `s${i + 1}.png`), Buffer.from(data, 'base64'));
 	}
 	const py = existsSync('.venv/Scripts/python.exe') ? '.venv/Scripts/python.exe' : 'python';
-	const r = spawnSync(py, ['scripts/pitch_pptx.py', dir, String(n), join(OUT, `lunar-landing-site-navigator-${lang}.pptx`)], { stdio: 'inherit' });
+	const r = spawnSync(py, ['scripts/pitch_pptx.py', dir, String(n), join(OUT, `lunar-landing-site-navigator-${sfx}.pptx`)], { stdio: 'inherit' });
 	if (r.status !== 0) throw new Error('pptx failed');
-	console.log(`${lang}: ${n} slides -> pdf, pptx`);
+	console.log(`${sfx}: ${n} slides -> pdf, pptx`);
 }
 // keep the running build in sync without a rebuild
-if (existsSync('build/pitch')) for (const lang of ['en', 'uk']) for (const ext of ['pdf', 'pptx']) { const f = `lunar-landing-site-navigator-${lang}.${ext}`; copyFileSync(join(OUT, f), join('build/pitch', f)); }
+if (existsSync('build/pitch')) for (const lang of ['en', 'uk', 'en-link', 'uk-link']) for (const ext of ['pdf', 'pptx']) { const f = `lunar-landing-site-navigator-${lang}.${ext}`; copyFileSync(join(OUT, f), join('build/pitch', f)); }
 process.exit(0);

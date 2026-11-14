@@ -16,7 +16,14 @@ export const PITCH = {
 			prev: 'Previous slide',
 			next: 'Next slide',
 			hint: '← → to navigate · F full screen',
-			langName: { en: 'English', uk: 'Українська' }
+			langName: { en: 'English', uk: 'Українська' },
+			addLink: 'Add a first slide with a link to the live version'
+		},
+		s0: {
+			kicker: 'Live version',
+			title: 'This deck is best seen online',
+			text: 'The original presentation, with animations and in two languages:',
+			sub: 'Open it on any device: scan the code or type the address.'
 		},
 		s1: {
 			kicker: 'NASA Space Apps Challenge 2026 · Lunar south pole',
@@ -120,7 +127,14 @@ export const PITCH = {
 			prev: 'Попередній слайд',
 			next: 'Наступний слайд',
 			hint: '← → гортати · F повний екран',
-			langName: { en: 'English', uk: 'Українська' }
+			langName: { en: 'English', uk: 'Українська' },
+			addLink: 'Додати перший слайд із посиланням на онлайн-версію'
+		},
+		s0: {
+			kicker: 'Онлайн-версія',
+			title: 'Цю презентацію краще дивитися онлайн',
+			text: 'Оригінал з анімаціями та двома мовами:',
+			sub: 'Відкрийте на будь-якому пристрої: відскануйте код або введіть адресу.'
 		},
 		s1: {
 			kicker: 'NASA Space Apps Challenge 2026 · Південний полюс Місяця',
