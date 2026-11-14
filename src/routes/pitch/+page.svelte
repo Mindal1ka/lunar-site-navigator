@@ -89,9 +89,13 @@
 
 	let idleT: ReturnType<typeof setTimeout> | undefined;
 	let overBar = false;
+	let lastPointer = 'mouse';
+	const coarse = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
 	function wake() {
 		idle = false;
 		clearTimeout(idleT);
+		// controls hide only for a mouse; on touch screens there is nothing that would bring them back
+		if (lastPointer !== 'mouse' || coarse) return;
 		idleT = setTimeout(() => (idle = !menu && !overBar), 2600);
 	}
 
@@ -110,7 +114,6 @@
 		wake();
 	}
 
-	let lastPointer = 'mouse';
 	function onStageClick(e: MouseEvent) {
 		if ((e.target as HTMLElement).closest('a, button, .bar')) return;
 		if (menu) {
@@ -164,7 +167,10 @@
 	<meta name="description" content="Lunar Landing Site Navigator: NASA Space Apps 2026 pitch" />
 </svelte:head>
 
-<svelte:window onresize={fit} onkeydown={onKey} onmousemove={wake} onpointerdown={(e) => (lastPointer = e.pointerType)} />
+<svelte:window onresize={fit} onkeydown={onKey} onmousemove={wake} onpointerdown={(e) => {
+		lastPointer = e.pointerType;
+		if (e.pointerType !== 'mouse') idle = false;
+	}} />
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -395,6 +401,7 @@
 			<button onclick={prev} disabled={cur === 0} aria-label={T.ui.prev}>
 				<svg viewBox="0 0 16 16" width="18" height="18"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" /></svg>
 			</button>
+			<span class="count">{cur + 1} / {N}</span>
 			<div class="dots">
 				{#each Array.from({ length: N }, (_, k) => k) as k (k)}
 					<button class="dotb" class:act={k === cur} onclick={() => go(k)} aria-label={`${k + 1} / ${N}`}></button>
@@ -1352,9 +1359,30 @@
 		font-size: 12px;
 		color: var(--dim);
 	}
+	.count {
+		display: none;
+		min-width: 44px;
+		text-align: center;
+		font: 500 13px var(--font-mono);
+		color: var(--muted);
+	}
 	@media (max-width: 760px) {
 		.hint {
 			display: none;
+		}
+		.bar {
+			bottom: 12px;
+			max-width: calc(100vw - 16px);
+			gap: 2px;
+		}
+		.dots {
+			display: none;
+		}
+		.count {
+			display: inline-block;
+		}
+		.sep {
+			margin: 0 2px;
 		}
 		.back {
 			font-size: 0;

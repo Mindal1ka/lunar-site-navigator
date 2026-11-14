@@ -190,6 +190,12 @@
 			width: auto;
 			max-height: none;
 			z-index: 16;
+			/* the sheet inside slides down with a transform, but this box stays full height:
+			   let taps through it, only the sheet itself takes them */
+			pointer-events: none;
+		}
+		.panel > :global(*) {
+			pointer-events: auto;
 		}
 		.timeline {
 			left: var(--gutter);
