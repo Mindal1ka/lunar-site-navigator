@@ -111,13 +111,15 @@ def run(cell_km: float) -> None:
     planes = np.full((3, lat.size), 255, dtype=np.uint8)
     planes[0, valid] = np.clip(np.round(out[valid, 0] * 200), 0, 200)
     planes[1, valid] = np.clip(np.round(out[valid, 1] * 200), 0, 200)
-    planes[2, valid] = np.clip(np.round(out[valid, 2] * meta["step_s"] / 86400.0), 0, 254)
+    # night: days, 253 = 253 days or more, 254 = no sunlight in the whole period
+    days = np.clip(np.round(out[valid, 2] * meta["step_s"] / 86400.0), 0, 253)
+    planes[2, valid] = np.where(out[valid, 2] >= n_hours, 254, days)
     (OUT / "heatmap.bin").write_bytes(planes.tobytes())
     (OUT / "heatmap.json").write_text(json.dumps({
         "cell_km": cell_km, "n": n_cells, "half_km": HALF_KM,
         "layout": "3 planes [sun, earth, night], row-major, row 0 at +y (towards lon 0), col 0 at -x",
         "sun_earth_scale": "value / 200 = fraction (0.5 % steps); 255 = no data",
-        "night_unit": "days (255 = no data)",
+        "night_unit": "days; 253 = 253 days or more; 254 = no sunlight in the whole period; 255 = no data",
         "observer_height_m": OBS_H, "earth_margin_deg": EARTH_MARGIN,
         "period_utc": [meta["start_utc"], f"+{n_hours} h"],
         "method": "LOLA LDEM_80S_80M, 720 azimuth bins, rays up to 150 km, hourly SPICE ephemeris",

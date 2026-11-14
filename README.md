@@ -50,6 +50,8 @@ serve.mjs   Tiny static server for the production build
 ```
 
 Rebuild data: `python -m venv .venv && .venv/Scripts/pip install numpy spiceypy numba`, download the files listed above into `data/raw/lola` and `data/raw/spice`, then `cd pipeline && python ephem.py`.
+
+Heat map: `python heatmap_gpu.py` computes the 1 km map (2 m panel height, first 12 months) on an NVIDIA GPU with CuPy in about 2 minutes (`pip install cupy-cuda12x nvidia-cuda-nvrtc-cu12`). It is the same method as the CPU reference `heatmap.py`, which takes several hours. `python heatmap_gpu.py --validate 400` compares the two on random cells: the horizon differs by at most 0.007°, Sun/Earth by at most 0.023 pp, and no cell changes after the map's 0.5 % rounding.
 Run the app: `npm install && npm run build && node serve.mjs` (serves `build/` on 127.0.0.1:44000).
 
 ## Data sources and references
@@ -76,6 +78,7 @@ Run the app: `npm install && npm run build && node serve.mjs` (serves `build/` o
 | NumPy | BSD-3-Clause |
 | SpiceyPy | MIT (wraps NAIF CSPICE, public domain/NASA) |
 | Numba | BSD-2-Clause |
+| CuPy | MIT |
 
 ## Use of AI
 

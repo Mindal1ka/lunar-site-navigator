@@ -43,6 +43,7 @@
 				night: { title: 'Longest night', what: 'longest stretch with the Sun fully hidden' }
 			},
 			heightLine: (h: number) => `Panel/antenna height: ${h} m`,
+			cellLine: (km: number) => `${km} km cells: an overview, site values come from the 40 m horizon`,
 			mismatch: (h: number) => `Map precomputed at ${h} m; site numbers follow your height setting.`,
 			why: {
 				shadows: 'Why the long shadows? At the pole the Sun never climbs more than about 1.5° above the horizon, so every hill casts a shadow kilometres long. Shadows here are traced on real LOLA heights.',
@@ -61,7 +62,9 @@
 			lat: (v: string) => `${v}° S`,
 			lon: (v: string) => `${v}° E`,
 			site: 'Site',
-			days: 'd'
+			days: 'd',
+			allDark: 'no sunlight in the whole period',
+			atLeast: '≥'
 		},
 		uk: {
 			region: '3D-мапа південного полюса Місяця',
@@ -88,6 +91,7 @@
 				night: { title: 'Найдовша ніч', what: 'найдовший відрізок, коли Сонце повністю сховане' }
 			},
 			heightLine: (h: number) => `Висота панелі/антени: ${h} м`,
+			cellLine: (km: number) => `Комірки ${km} км: огляд, значення для місць — з горизонту 40 м`,
 			mismatch: (h: number) => `Карту пораховано для ${h} м; цифри місць ідуть за вашою висотою.`,
 			why: {
 				shadows: 'Чому такі довгі тіні? На полюсі Сонце не підіймається вище приблизно 1,5° над горизонтом, тож кожен пагорб кидає тінь на кілометри. Тіні тут пораховано за справжніми висотами LOLA.',
@@ -106,7 +110,9 @@
 			lat: (v: string) => `${v}° пд. ш.`,
 			lon: (v: string) => `${v}° сх. д.`,
 			site: 'Місце',
-			days: 'д'
+			days: 'д',
+			allDark: 'без Сонця за весь період',
+			atLeast: '≥'
 		}
 	};
 	const t = $derived(T[app.lang]);
@@ -570,7 +576,10 @@
 		return t.lon(fmtNum(v, 2));
 	}
 	function heatFmt(v: number) {
-		return app.heatLayer === 'night' ? `${fmtNum(v)} ${t.days}` : `${fmtNum(v, v < 10 ? 1 : 0)} %`;
+		if (app.heatLayer !== 'night') return `${fmtNum(v, v < 10 ? 1 : 0)} %`;
+		// night plane: 254 = no sunlight in the whole period, 253 = 253 days or more (see pipeline/heatmap.py)
+		if (v === 254) return t.allDark;
+		return `${v === 253 ? t.atLeast : ''}${fmtNum(v)} ${t.days}`;
 	}
 	const legendKey = $derived((app.heatLayer === 'off' ? 'sun' : app.heatLayer) as RampLayer);
 	const heatTint: Record<HeatLayer, string> = {
@@ -789,6 +798,7 @@
 				{/each}
 			</div>
 			<div class="lmeta">{t.heightLine(hm.observer_height_m)} · {heatPeriod}</div>
+			<div class="lmeta">{t.cellLine(hm.cell_km)}</div>
 			{#if app.heightM !== hm.observer_height_m}
 				<div class="lnote">{t.mismatch(hm.observer_height_m)}</div>
 			{/if}
