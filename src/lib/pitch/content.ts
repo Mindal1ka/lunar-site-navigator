@@ -48,7 +48,8 @@ export const PITCH = {
 				['Contact', 'How often can the antenna see Earth directly?']
 			],
 			callout: ['Within 500 m of Connecting Ridge, sunlight ranges from ', ' to ', ' and the longest night from ', ' to ', ' days.'],
-			caption: '360° view from Connecting Ridge (C1): the Sun is 1.4° above the real LOLA horizon.'
+			caption: '360° view from Connecting Ridge (C1): the Sun is 1.4° above the real LOLA horizon.',
+			case: ['Real case: ', 'IM-2 Athena', ' (March 2025) came down on its side in a crater about 250 m from its target. Its solar panels could not catch the low Sun, and the battery ran out about 12 hours later.']
 		},
 		s3: {
 			kicker: 'What we built',
@@ -70,8 +71,8 @@ export const PITCH = {
 				['03 · NAIF SPICE', 'Sun and Earth, hourly', 'Positions from JPL ephemerides.'],
 				['04 · Result', 'Per hour, then per period', 'Visible share of the solar disk; Earth above the horizon + antenna margin.']
 			],
-			stat1: 'points: the whole 420 × 420 km region on a 100 m grid',
-			stat2: 'for the 1 km map on a GPU, vs several hours on the CPU (same results)',
+			stat1: 'points: the 100 m map of the whole 420 × 420 km region; over an hour on two GPUs',
+			stat2: 'for the 1 km overview map (176 thousand points) on one GPU, vs several hours on a CPU',
 			min: 'min'
 		},
 		s5: {
@@ -79,7 +80,7 @@ export const PITCH = {
 			title: 'Checked against NASA data and published research.',
 			r1: ['max difference from ', 'JPL Horizons', ' (3 sites × 293 dates)'],
 			r2: ['mean error vs the ', 'NASA LOLA', ' illumination map, 150 points (r = 0.97)'],
-			note: 'Always compared at the same height and with the same definition as the reference. On sharp ridges at 0 m, terrain finer than a pixel moves the result by 10–18 pp, so the app uses a 2 m panel height by default.',
+			note: 'Always compared at the same height and with the same definition as the reference. At 0 m our values are 8–28 pp below the published ones: on sharp ridges, terrain finer than a pixel decides. So the app uses a 2 m panel height by default.',
 			pp: 'pp',
 			tTitle: 'Gläser et al. (2018), Sun %',
 			tSub: 'Same 2 m height, same definition (mean visible share of the disk)',
@@ -159,7 +160,8 @@ export const PITCH = {
 				['Звʼязок', 'Як часто антена бачить Землю напряму?']
 			],
 			callout: ['У межах 500 м від Connecting Ridge сонце — від ', ' до ', ', а найдовша ніч — від ', ' до ', ' діб.'],
-			caption: 'Панорама 360° з Connecting Ridge (C1): Сонце на 1,4° над справжнім горизонтом LOLA.'
+			caption: 'Панорама 360° з Connecting Ridge (C1): Сонце на 1,4° над справжнім горизонтом LOLA.',
+			case: ['Реальний випадок: ', 'IM-2 Athena', ' (березень 2025) сів на бік у кратері приблизно за 250 м від цілі. Сонячні панелі не ловили низьке Сонце, і батарея сіла приблизно через 12 годин.']
 		},
 		s3: {
 			kicker: 'Що ми зробили',
@@ -181,8 +183,8 @@ export const PITCH = {
 				['03 · NAIF SPICE', 'Сонце й Земля щогодини', 'Положення з ефемерид JPL.'],
 				['04 · Результат', 'Щогодини, потім за період', 'Видима частка сонячного диска; Земля над горизонтом + запас антени.']
 			],
-			stat1: 'точок: увесь регіон 420 × 420 км із кроком 100 м',
-			stat2: 'на карту 1 км на відеокарті замість кількох годин на процесорі (ті самі результати)',
+			stat1: 'точок: карта 100 м усього регіону 420 × 420 км; понад годину на двох відеокартах',
+			stat2: 'на оглядову карту 1 км (176 тисяч точок) на одній відеокарті замість кількох годин на процесорі',
 			min: 'хв'
 		},
 		s5: {
@@ -190,7 +192,7 @@ export const PITCH = {
 			title: 'Перевірено за даними NASA й опублікованими дослідженнями.',
 			r1: ['найбільша різниця з ', 'JPL Horizons', ' (3 місця × 293 дати)'],
 			r2: ['середня похибка відносно карти освітленості ', 'NASA LOLA', ', 150 точок (r = 0,97)'],
-			note: 'Порівнюємо завжди на тій самій висоті й за тим самим визначенням, що й еталон. На гострих гребенях на 0 м рельєф, дрібніший за піксель, змінює результат на 10–18 в. п., тому за замовчуванням висота панелі 2 м.',
+			note: 'Порівнюємо завжди на тій самій висоті й за тим самим визначенням, що й еталон. На 0 м розбіжність із публікацією 8–28 в. п.: на гострих гребенях вирішує рельєф, дрібніший за піксель. Тому за замовчуванням висота панелі 2 м.',
 			pp: 'в. п.',
 			tTitle: 'Gläser et al. (2018), Сонце %',
 			tSub: 'Та сама висота 2 м, те саме визначення (середня видима частка диска)',

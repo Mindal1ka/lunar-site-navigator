@@ -250,6 +250,7 @@
 							><span data-to="27" data-d="0">27</span></b
 						>{T.s2.callout[4]}
 					</p>
+					<p class="case a" style:--d="8">{T.s2.case[0]}<b>{T.s2.case[1]}</b>{T.s2.case[2]}</p>
 				</div>
 				<div class="a right" style:--d="2">
 					<div class="frame"><img class="shot" src={img('pano_crop')} alt={T.s2.caption} /></div>
@@ -813,27 +814,41 @@
 	/* 2 */
 	.s2 .grid {
 		display: grid;
-		grid-template-columns: 760px 1fr;
-		gap: 64px;
-		margin-top: 54px;
+		grid-template-columns: 820px 1fr;
+		gap: 56px;
+		margin-top: 44px;
 	}
 	.qs {
 		display: flex;
 		flex-direction: column;
-		gap: 20px;
+		gap: 14px;
+	}
+	.s2 .q {
+		padding: 18px 28px;
+	}
+	.case {
+		margin: 22px 0 0;
+		padding-left: 18px;
+		border-left: 3px solid var(--sun);
+		font-size: 23px;
+		line-height: 1.45;
+		color: var(--muted);
+	}
+	.case b {
+		color: var(--text);
 	}
 	.q b {
-		font-size: 34px;
+		font-size: 31px;
 		margin-bottom: 8px;
 	}
 	.q span {
-		font-size: 25px;
+		font-size: 23px;
 		color: var(--muted);
 		line-height: 1.4;
 	}
 	.callout {
-		margin: 26px 0 0;
-		font-size: 28px;
+		margin: 22px 0 0;
+		font-size: 26px;
 		line-height: 1.45;
 		color: #c9d0db;
 	}
