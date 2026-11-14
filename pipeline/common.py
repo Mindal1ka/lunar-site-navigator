@@ -4,10 +4,13 @@ Note: parts of this pipeline were written with the help of an AI coding
 assistant (Claude); every formula is checked against JPL Horizons and
 published NASA products (see pipeline/validate_*.py and README "Use of AI").
 """
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-RAW = ROOT / "data" / "raw"
+# LUNAR_ROOT (optional) points RAW at another checkout, e.g. when running from a git worktree
+# that has no data/raw of its own. Everything else stays relative to this checkout.
+RAW = Path(os.environ.get("LUNAR_ROOT") or ROOT) / "data" / "raw"
 WORK = ROOT / "data" / "work"
 OUT = ROOT / "static" / "data"
 

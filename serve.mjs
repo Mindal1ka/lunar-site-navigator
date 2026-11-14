@@ -42,9 +42,23 @@ async function fileAt(path) {
 	return null;
 }
 
+function clientHeaders(req) {
+	const h = { 'x-forwarded-for': String(req.headers['x-forwarded-for'] ?? req.socket.remoteAddress ?? '') };
+	if (req.headers['cf-connecting-ip']) h['cf-connecting-ip'] = String(req.headers['cf-connecting-ip']);
+	return h;
+}
+
 function proxyApi(req, res) {
 	const up = request(
-		{ host: '127.0.0.1', port: API_PORT, path: req.url, method: 'GET', timeout: 60_000 },
+		{
+			host: '127.0.0.1',
+			port: API_PORT,
+			path: req.url,
+			method: 'GET',
+			timeout: 60_000,
+			// client address for the per-client limits of /api/square
+			headers: clientHeaders(req)
+		},
 		(r) => {
 			res.writeHead(r.statusCode ?? 502, r.headers);
 			r.pipe(res);
