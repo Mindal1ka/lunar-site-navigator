@@ -170,5 +170,18 @@ def longest_run(mask: np.ndarray) -> int:
 
 def site_horizon(dem: Dem, lat: float, lon: float, obs_height_m: float = 2.0,
                  max_dist_m: float = 200_000.0, n_az: int = N_AZ):
+    """Horizon profile (deg per azimuth bin) and DEM height (m) at the site.
+
+    Rays stop at the DEM edge (-80 deg for LDEM_80S). For the curated sites this
+    does not change any metric (checked by filling the missing terrain with up to
+    +8 km); for custom points north of about -81.5 deg the UI shows a warning.
+    """
+    if not np.isfinite(_site_height(dem, lat, lon)):
+        raise ValueError(f"site {lat}, {lon} is outside the DEM ({dem.path.name})")
     prof, h0 = horizon_profile(dem.dn, dem.n, dem.scale, lat, lon, obs_height_m, max_dist_m, n_az)
     return prof, float(h0)
+
+
+def _site_height(dem: Dem, lat: float, lon: float) -> float:
+    x, y = latlon_to_xy(lat, lon)
+    return sample_bilinear(dem.dn, dem.n, dem.scale, x, y)

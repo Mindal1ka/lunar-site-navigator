@@ -25,6 +25,21 @@ Definitions shown next to every number in the app:
 - **Earth %** — share of time the Earth's centre is above the horizon + antenna margin.
 - **Battery** — load × longest night ÷ allowed depth of discharge (default 80 %).
 
+## Validation (reproducible: `pipeline/validate_*.py`)
+
+| Check | Reference | Result |
+|---|---|---|
+| Sun & Earth azimuth/elevation (sphere horizon) | JPL Horizons API, 3 sites × 293 epochs (2026-12 – 2030-12) | max difference **0.1″** |
+| Sun and Earth visibility, 150 random points 85.2–89.8°S, **same height as the maps (surface, 0 m)**, same definition (any part of the disc, share of time) | NASA LOLA average-visibility maps `AVGVISIB_85S_060M_201608` (Sun, Earth), 18.6 yr | Sun: bias −0.3 pp, MAE 1.0 pp, r = 0.965 · Earth: bias −0.2 pp, MAE 1.2 pp, r = 0.98 |
+| Same points computed at 2 m (control) | same maps | bias turns positive (Sun +0.7 pp, Earth +1.05 pp), as expected for a raised observer; MAE stays ~1 pp, so this test checks the method across terrain but is only weakly sensitive to height |
+| Average illumination (mean visible disc fraction) at published points, **at the published heights** (0 m, 2 m, 10 m), 2017–2037 | Gläser et al. 2018 (PSS 162), Gläser et al. EPSC2014 | 2 m / 10 m: Connecting Ridge C2 78.0 vs 78.1 %, Shackleton rim 85.5 vs 85.5 %, ridge spot at 10 m 92.5 vs 92.5 % (longest darkness 3.04 vs 3.08 d), Connecting Ridge C1 86.4 vs 88.0 %. 0 m: 8–28 pp lower than published (see limitation below) |
+
+Known limitation: at exactly ground level (0 m) results at sharp ridge tops depend strongly on sub-pixel terrain (+0.5 m of height can change sunlight by 10–18 pp), so published surface-level values are not reproduced reliably by any 20–40 m DEM method; the app therefore defaults to a 2 m observer height and shows the height next to every number.
+
+## Landing sites
+
+Artemis candidate regions follow NASA's list of 28 Oct 2024. NASA does not publish region centre coordinates, so each region is represented by the centre of its LROC NAC "Artemis III candidate landing site" mosaic (Mons Mouton and Nobile Rim 1 share one mosaic; Slater Plain is an approximate reading from a published figure). Per NASA release 26-022 (27 Feb 2026) the first crewed landing moved to Artemis IV (2028); the candidate regions are unchanged. Additional reference points: IM-2 Athena landing site (LROC), high-illumination points from Gläser et al. 2018 and Peña-Asensio et al. 2025, and crater floors from the IAU Gazetteer. Every site in `static/data/sites.json` carries its source URL.
+
 ## Project layout
 
 ```
@@ -43,6 +58,13 @@ Run the app: `npm install && npm run build && node serve.mjs` (serves `build/` o
 - NASA/JPL NAIF SPICE generic kernels: https://naif.jpl.nasa.gov/pub/naif/generic_kernels/
 - JPL Horizons System: https://ssd.jpl.nasa.gov/horizons/
 - Challenge resources: LROC QuickMap (https://quickmap.lroc.asu.edu/), NASA Moon Trek (https://trek.nasa.gov/moon/)
+- NASA LOLA illumination maps (Mazarico et al. 2011, Icarus 211; PGDA product 69): https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/extras/illumination/ , https://pgda.gsfc.nasa.gov/products/69
+- Gläser et al. 2018, Planetary and Space Science 162, doi:10.1016/j.pss.2017.07.006 (NTRS 20170007365); Gläser et al., EPSC2014-136-1
+- NASA, "NASA Provides Update on Artemis III Moon Landing Regions", 28 Oct 2024; NASA release 26-022, 27 Feb 2026
+- LROC NAC Artemis candidate site mosaics (NASA/GSFC/Arizona State University): https://data.lroc.im-ldi.com/lroc/view_rdr/ ; IM-2 landing site: https://lroc.im-ldi.com/images/1408
+- Peña-Asensio, Neira-Acosta, Sánchez-Lozano, Acta Astronautica 226 (2025), doi:10.1016/j.actaastro.2024.10.049
+- Samaddar et al., LPSC 2025 abstract 2401 (Slater Plain)
+- IAU / USGS Gazetteer of Planetary Nomenclature: https://planetarynames.wr.usgs.gov/
 
 ## Software and licenses
 

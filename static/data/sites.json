@@ -1,0 +1,231 @@
+{
+ "dem": "LOLA LDEM_80S_40M (40 m/px), NASA PDS",
+ "n_az": 1440,
+ "heights_m": [
+  0,
+  1,
+  2,
+  3,
+  5,
+  7,
+  10,
+  15,
+  20
+ ],
+ "dtype": "int16-le, 1/100 deg",
+ "layout": "[site][height][azimuth]",
+ "max_distance_km": 200,
+ "frame": "Moon Mean-Earth (DE421), planetocentric, east-positive longitude",
+ "sites": [
+  {
+   "id": "cabeus-b-peak",
+   "name": {
+    "en": "Peak near Cabeus B",
+    "uk": "Пік біля Кабеуса B"
+   },
+   "category": "artemis",
+   "lat": -83.6,
+   "lon": 291.2,
+   "elevation_m": 4535.3,
+   "coord_basis": "lroc_mosaic_centre",
+   "source": "https://data.lroc.im-ldi.com/lroc/view_rdr/NAC_ROI_CABEUSPKLO1",
+   "note": "Centre of the LROC NAC mosaic of this Artemis candidate region (NASA list of 28 Oct 2024). NASA does not publish region centre coordinates."
+  },
+  {
+   "id": "haworth",
+   "name": {
+    "en": "Haworth",
+    "uk": "Гаворт"
+   },
+   "category": "artemis",
+   "lat": -86.7,
+   "lon": 336.3,
+   "elevation_m": 1492.4,
+   "coord_basis": "lroc_mosaic_centre",
+   "source": "https://data.lroc.im-ldi.com/lroc/view_rdr/NAC_ROI_HAWORTH_LO1",
+   "note": "Centre of the LROC NAC mosaic of this Artemis candidate region (NASA list of 28 Oct 2024). NASA does not publish region centre coordinates."
+  },
+  {
+   "id": "malapert-massif",
+   "name": {
+    "en": "Malapert Massif",
+    "uk": "Масив Малаперт"
+   },
+   "category": "artemis",
+   "lat": -86.0,
+   "lon": 0.3,
+   "elevation_m": 4830.6,
+   "coord_basis": "lroc_mosaic_centre",
+   "source": "https://data.lroc.im-ldi.com/lroc/view_rdr/NAC_ROI_MALAPERTLO1",
+   "note": "Centre of the LROC NAC mosaic of this Artemis candidate region (NASA list of 28 Oct 2024). NASA does not publish region centre coordinates."
+  },
+  {
+   "id": "mons-mouton-plateau",
+   "name": {
+    "en": "Mons Mouton Plateau",
+    "uk": "Плато гори Мутон"
+   },
+   "category": "artemis",
+   "lat": -84.3,
+   "lon": 30.6,
+   "elevation_m": 5290.1,
+   "coord_basis": "lroc_mosaic_centre",
+   "source": "https://data.lroc.im-ldi.com/lroc/view_rdr/NAC_ROI_MOUTNPLTLO1",
+   "note": "Centre of the LROC NAC mosaic of this Artemis candidate region (NASA list of 28 Oct 2024). NASA does not publish region centre coordinates."
+  },
+  {
+   "id": "mons-mouton-nobile-rim-1",
+   "name": {
+    "en": "Mons Mouton / Nobile Rim 1",
+    "uk": "Гора Мутон / вал Нобіле 1"
+   },
+   "category": "artemis",
+   "lat": -85.4,
+   "lon": 35.3,
+   "elevation_m": 5750.9,
+   "coord_basis": "lroc_mosaic_centre",
+   "source": "https://data.lroc.im-ldi.com/lroc/view_rdr/NAC_ROI_MTMOUTONLO1",
+   "note": "Centre of the LROC NAC mosaic of this Artemis candidate region (NASA list of 28 Oct 2024). NASA does not publish region centre coordinates. Two NASA regions share this one LROC mosaic, so a separate centre for each is not available."
+  },
+  {
+   "id": "nobile-rim-2",
+   "name": {
+    "en": "Nobile Rim 2",
+    "uk": "Вал Нобіле 2"
+   },
+   "category": "artemis",
+   "lat": -83.9,
+   "lon": 58.7,
+   "elevation_m": 911.5,
+   "coord_basis": "lroc_mosaic_centre",
+   "source": "https://data.lroc.im-ldi.com/lroc/view_rdr/NAC_ROI_NOBILE02LO1",
+   "note": "Centre of the LROC NAC mosaic of this Artemis candidate region (NASA list of 28 Oct 2024). NASA does not publish region centre coordinates."
+  },
+  {
+   "id": "de-gerlache-rim-2",
+   "name": {
+    "en": "de Gerlache Rim 2",
+    "uk": "Вал де Ґерлаша 2"
+   },
+   "category": "artemis",
+   "lat": -88.5,
+   "lon": 293.3,
+   "elevation_m": 1331.1,
+   "coord_basis": "lroc_mosaic_centre",
+   "source": "https://data.lroc.im-ldi.com/lroc/view_rdr/NAC_ROI_DEGERRIMLO1",
+   "note": "Centre of the LROC NAC mosaic of this Artemis candidate region (NASA list of 28 Oct 2024). NASA does not publish region centre coordinates. The mosaic is titled 'de Gerlache Rim' and may cover Rim 1 and Rim 2."
+  },
+  {
+   "id": "slater-plain",
+   "name": {
+    "en": "Slater Plain",
+    "uk": "Рівнина Слейтера"
+   },
+   "category": "artemis",
+   "lat": -87.4,
+   "lon": 111.0,
+   "elevation_m": -376.6,
+   "coord_basis": "estimated_from_figure",
+   "source": "https://www.hou.usra.edu/meetings/lpsc2025/pdf/2401.pdf",
+   "note": "Approximate (about ±0.5°): read from Fig. 1 of Samaddar et al., LPSC 2025 #2401 (plains north of Slater crater)."
+  },
+  {
+   "id": "im2-athena",
+   "name": {
+    "en": "IM-2 Athena landing site",
+    "uk": "Місце посадки IM-2 Athena"
+   },
+   "category": "mission",
+   "lat": -84.7906,
+   "lon": 29.1957,
+   "elevation_m": 5321.7,
+   "coord_basis": "official",
+   "source": "https://lroc.im-ldi.com/images/1408",
+   "note": "Intuitive Machines IM-2 landed here on 6 March 2025 (LROC)."
+  },
+  {
+   "id": "connecting-ridge-c1",
+   "name": {
+    "en": "Connecting Ridge (C1)",
+    "uk": "Сполучний хребет (C1)"
+   },
+   "category": "sunny",
+   "lat": -89.4398,
+   "lon": 222.83,
+   "elevation_m": 1957.8,
+   "coord_basis": "paper",
+   "source": "https://ntrs.nasa.gov/api/citations/20170007365/downloads/20170007365.pdf",
+   "note": "Highest-illumination point at 2 m in Gläser et al. 2018 (88.0 % average illumination, 2017–2037)."
+  },
+  {
+   "id": "connecting-ridge-c2",
+   "name": {
+    "en": "Connecting Ridge (C2)",
+    "uk": "Сполучний хребет (C2)"
+   },
+   "category": "sunny",
+   "lat": -89.313,
+   "lon": 245.98,
+   "elevation_m": 1691.6,
+   "coord_basis": "paper",
+   "source": "https://ntrs.nasa.gov/api/citations/20170007365/downloads/20170007365.pdf",
+   "note": "Gläser et al. 2018, 78.1 % average illumination at 2 m."
+  },
+  {
+   "id": "shackleton-rim",
+   "name": {
+    "en": "Shackleton rim",
+    "uk": "Вал кратера Шеклтон"
+   },
+   "category": "sunny",
+   "lat": -89.6866,
+   "lon": 197.19,
+   "elevation_m": 1729.2,
+   "coord_basis": "paper",
+   "source": "https://ntrs.nasa.gov/api/citations/20170007365/downloads/20170007365.pdf",
+   "note": "Gläser et al. 2018, 85.5 % average illumination at 2 m."
+  },
+  {
+   "id": "nobile-rim-2-best",
+   "name": {
+    "en": "Nobile Rim 2 best point",
+    "uk": "Найкраща точка валу Нобіле 2"
+   },
+   "category": "sunny",
+   "lat": -84.20156,
+   "lon": 60.69989,
+   "elevation_m": 1122.8,
+   "coord_basis": "paper",
+   "source": "https://arxiv.org/html/2406.19863v2",
+   "note": "Top-ranked landing point in Nobile Rim 2, Peña-Asensio et al., Acta Astronautica 226 (2025)."
+  },
+  {
+   "id": "shackleton-floor",
+   "name": {
+    "en": "Shackleton crater floor",
+    "uk": "Дно кратера Шеклтон"
+   },
+   "category": "shadow",
+   "lat": -89.67,
+   "lon": 129.78,
+   "elevation_m": -2788.9,
+   "coord_basis": "official",
+   "source": "https://planetarynames.wr.usgs.gov/SearchResults?Target=16_Moon&Feature%20Name=Shackleton",
+   "note": "Crater centre from the IAU Gazetteer; permanently shadowed floor."
+  },
+  {
+   "id": "haworth-floor",
+   "name": {
+    "en": "Haworth crater floor",
+    "uk": "Дно кратера Гаворт"
+   },
+   "category": "shadow",
+   "lat": -87.45,
+   "lon": 354.83,
+   "elevation_m": -3314.7,
+   "coord_basis": "official",
+   "source": "https://planetarynames.wr.usgs.gov/SearchResults?Target=16_Moon&Feature%20Name=Haworth",
+   "note": "Crater centre from the IAU Gazetteer; permanently shadowed region."
+  }
+ ]
+}
