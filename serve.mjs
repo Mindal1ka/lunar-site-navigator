@@ -29,6 +29,8 @@ const TYPES = {
 	'.txt': 'text/plain; charset=utf-8',
 	'.csv': 'text/csv; charset=utf-8',
 	'.bin': 'application/octet-stream',
+	'.pdf': 'application/pdf',
+	'.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 	'.woff2': 'font/woff2',
 	'.webmanifest': 'application/manifest+json'
 };
@@ -89,7 +91,8 @@ createServer(async (req, res) => {
 		if (!file) {
 			// Unknown asset -> 404; unknown route -> SPA fallback.
 			if (extname(target)) {
-				res.writeHead(404).end('Not found');
+				// never cacheable: a file that appears a moment later (e.g. during a deploy) must not stay 404 at the CDN
+				res.writeHead(404, { 'Cache-Control': 'no-store' }).end('Not found');
 				return;
 			}
 			file = await fileAt(FALLBACK);
