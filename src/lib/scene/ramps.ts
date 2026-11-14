@@ -2,7 +2,7 @@
 // Heat map colour ramps. One source of truth for the GLSL (generated below) and
 // the CSS legend, so the legend always matches the colours on the terrain.
 
-export type RampLayer = 'sun' | 'earth' | 'night';
+export type RampLayer = 'sun' | 'earth' | 'night' | 'slope';
 type Stop = [t: number, hex: string];
 
 export const RAMPS: Record<RampLayer, Stop[]> = {
@@ -30,8 +30,21 @@ export const RAMPS: Record<RampLayer, Stop[]> = {
 		[0.5, '#c8607a'],
 		[0.75, '#6a3f9e'],
 		[1, '#2a1a52']
+	],
+	// slope: flat (landable) teal-green -> pale at the usual lander limit -> steep hot red
+	slope: [
+		[0, '#0f3d3a'],
+		[0.17, '#1f9a7a'],
+		[0.33, '#b8f0a0'],
+		[0.5, '#ffd36b'],
+		[0.67, '#ff8a3d'],
+		[1, '#e0306a']
 	]
 };
+
+/** Slope ramp spans 0..SLOPE_MAX degrees (steeper is clamped). */
+export const SLOPE_MAX = 30;
+export const slopeT = (deg: number) => Math.min(1, Math.max(0, deg / SLOPE_MAX));
 
 /** Night ramp is logarithmic in days: 1 d, 1 lunar day (~15 d) and a whole year all stay readable. */
 export const NIGHT_LOG_MAX = 255;
@@ -60,4 +73,4 @@ function rampGlsl(layer: RampLayer): string {
 	return body + '\treturn c;\n}\n';
 }
 
-export const RAMP_GLSL = (['sun', 'earth', 'night'] as RampLayer[]).map(rampGlsl).join('\n');
+export const RAMP_GLSL = (['sun', 'earth', 'night', 'slope'] as RampLayer[]).map(rampGlsl).join('\n');

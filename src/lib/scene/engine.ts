@@ -22,7 +22,18 @@ import {
 	TERRAIN_VERT
 } from './shaders';
 
-export type HeatIndex = 0 | 1 | 2 | 3; // off, sun, earth, night
+export type HeatIndex = 0 | 1 | 2 | 3 | 4; // off, sun, earth, night, slope
+
+/** Detail square for the shader: RGBA8 n x n = [sun, earth, night, slope] codes of one height. */
+export interface SquareTex {
+	key: string;
+	n: number;
+	rgba: Uint8Array;
+	/** top-left corner (km, map) and extent (km) */
+	x0Km: number;
+	y0Km: number;
+	extKm: number;
+}
 
 export interface EngineOptions {
 	mobile: boolean;
@@ -64,6 +75,7 @@ interface Tween {
 	dur: number;
 	set: (v: number) => void;
 	done?: () => void;
+	ease?: (t: number) => number;
 }
 
 const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
@@ -92,6 +104,9 @@ export class SceneEngine {
 	private detailTex: (THREE.DataTexture | null)[] = [null, null];
 	private ovTex: THREE.DataTexture | null = null;
 	private heatTex: THREE.DataTexture | null = null;
+	private sqTex: (THREE.DataTexture | null)[] = [null, null];
+	private sqKey: (string | null)[] = [null, null];
+	private bestKey: (string | null)[] = [null, null];
 	private placeholder: THREE.DataTexture;
 	private heatPlaceholder: THREE.DataTexture;
 	private sunMesh: THREE.Mesh;
@@ -180,7 +195,16 @@ export class SceneEngine {
 			uHeat: { value: heatPh },
 			uHeatGrid: { value: new THREE.Vector4(210, 1, 1, 0) },
 			uHeatLayers: { value: new THREE.Vector3(0, 0, 1) },
-			uHeatAlpha: { value: 1 }
+			uHeatAlpha: { value: 1 },
+			uSq0: { value: heatPh },
+			uSq0Rect: { value: new THREE.Vector4(0, 0, 1, 0) },
+			uSq0Info: { value: new THREE.Vector2(1, 0) },
+			uSq1: { value: heatPh },
+			uSq1Rect: { value: new THREE.Vector4(0, 0, 1, 0) },
+			uSq1Info: { value: new THREE.Vector2(1, 0) },
+			uBest0: { value: new THREE.Vector4(0, 0, 0.1, 0) },
+			uBest1: { value: new THREE.Vector4(0, 0, 0.1, 0) },
+			uSlopeLimit: { value: 10 }
 		};
 
 		// ---- sky: stars, Sun, Earth (rendered with a rotation-only camera)
@@ -406,6 +430,70 @@ export class SceneEngine {
 		this.heatTex = tex;
 		this.U.uHeat.value = tex;
 		this.U.uHeatGrid.value.set(h.half_km, h.cell_km, h.n, 1);
+		this.invalidate();
+	}
+
+	/**
+	 * Detail square of slot 0 (A) / 1 (B). A new square sweeps in from the site outwards;
+	 * the same square with other planes (height change) swaps in place.
+	 */
+	setSquare(slot: 0 | 1, sq: SquareTex | null) {
+		const p = slot === 0 ? 'uSq0' : 'uSq1';
+		const rect = this.U[`${p}Rect`].value as THREE.Vector4;
+		const info = this.U[`${p}Info`].value as THREE.Vector2;
+		const key = `sq${slot}`;
+		if (!sq) {
+			if (this.sqKey[slot] === null) return;
+			this.sqKey[slot] = null;
+			this.tween(key, rect.w, 0, this.opts.reducedMotion ? 0 : 420, (v) => (rect.w = v), () => {
+				if (this.sqKey[slot] !== null) return;
+				info.y = 0;
+				this.U[p].value = this.heatPlaceholder;
+				this.sqTex[slot]?.dispose();
+				this.sqTex[slot] = null;
+			});
+			return;
+		}
+		const tex = new THREE.DataTexture(sq.rgba, sq.n, sq.n, THREE.RGBAFormat, THREE.UnsignedByteType);
+		tex.magFilter = tex.minFilter = THREE.NearestFilter;
+		tex.generateMipmaps = false;
+		tex.flipY = false;
+		tex.needsUpdate = true;
+		this.sqTex[slot]?.dispose();
+		this.sqTex[slot] = tex;
+		this.U[p].value = tex;
+		info.set(sq.n, 1);
+		const fresh = this.sqKey[slot] !== sq.key;
+		this.sqKey[slot] = sq.key;
+		rect.x = sq.x0Km;
+		rect.y = sq.y0Km;
+		rect.z = sq.extKm;
+		if (fresh) {
+			rect.w = 0;
+			this.tween(key, 0, 1, this.opts.reducedMotion ? 0 : 1500, (v) => (rect.w = v), undefined, easeOutCubic);
+		} else if (!this.tweens.has(key)) rect.w = 1;
+		this.invalidate();
+	}
+
+	/** Outline of the best landing cell of slot 0 / 1 (map km), fading in. */
+	setBestSpot(slot: 0 | 1, b: { key: string; mx: number; my: number; cellKm: number } | null) {
+		const u = this.U[slot === 0 ? 'uBest0' : 'uBest1'].value as THREE.Vector4;
+		const key = `best${slot}`;
+		if (!b) {
+			if (this.bestKey[slot] === null) return;
+			this.bestKey[slot] = null;
+			this.tween(key, u.w, 0, this.opts.reducedMotion ? 0 : 300, (v) => (u.w = v));
+			return;
+		}
+		if (this.bestKey[slot] === b.key) return;
+		const was = this.bestKey[slot];
+		this.bestKey[slot] = b.key;
+		u.set(b.mx, b.my, b.cellKm, was ? u.w : 0);
+		this.tween(key, was ? u.w : 0, 1, this.opts.reducedMotion ? 0 : 700, (v) => (u.w = v), undefined, easeOutCubic, was ? 0 : 900);
+	}
+
+	setSlopeLimit(deg: number) {
+		this.U.uSlopeLimit.value = deg;
 		this.invalidate();
 	}
 
@@ -641,7 +729,16 @@ export class SceneEngine {
 		this.dirty = true;
 	}
 
-	private tween(key: string, from: number, to: number, dur: number, set: (v: number) => void, done?: () => void) {
+	private tween(
+		key: string,
+		from: number,
+		to: number,
+		dur: number,
+		set: (v: number) => void,
+		done?: () => void,
+		ease?: (t: number) => number,
+		delay = 0
+	) {
 		// a new tween on the same key replaces the old one (its completion is dropped on purpose)
 		if (dur <= 0) {
 			set(to);
@@ -650,14 +747,14 @@ export class SceneEngine {
 			this.invalidate();
 			return;
 		}
-		this.tweens.set(key, { from, to, t0: performance.now(), dur, set, done });
+		this.tweens.set(key, { from, to, t0: performance.now() + delay, dur, set, done, ease });
 		this.invalidate();
 	}
 
 	private stepTweens(now: number) {
 		for (const [k, tw] of this.tweens) {
-			const raw = Math.min(1, (now - tw.t0) / tw.dur);
-			const e = k === 'heat' || k === 'fade' ? raw : easeInOutCubic(raw);
+			const raw = Math.max(0, Math.min(1, (now - tw.t0) / tw.dur));
+			const e = tw.ease ? tw.ease(raw) : k === 'heat' || k === 'fade' ? raw : easeInOutCubic(raw);
 			tw.set(tw.from + (tw.to - tw.from) * e);
 			if (raw >= 1) {
 				this.tweens.delete(k);
@@ -834,7 +931,7 @@ export class SceneEngine {
 
 	private onRestored = () => {
 		this.lost = false;
-		for (const t of [this.ovTex, this.heatTex, this.placeholder, ...this.detailTex]) if (t) t.needsUpdate = true;
+		for (const t of [this.ovTex, this.heatTex, this.placeholder, ...this.detailTex, ...this.sqTex]) if (t) t.needsUpdate = true;
 		this.resize();
 		this.opts.onContextRestored();
 	};
@@ -859,7 +956,7 @@ export class SceneEngine {
 			m.geometry.dispose();
 			(m.material as THREE.Material).dispose();
 		}
-		for (const t of [this.ovTex, this.heatTex, ...this.detailTex]) t?.dispose();
+		for (const t of [this.ovTex, this.heatTex, ...this.detailTex, ...this.sqTex]) t?.dispose();
 		for (const d of this.disposables) d.dispose();
 		this.renderer.dispose();
 		this.renderer.forceContextLoss();

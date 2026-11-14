@@ -5,7 +5,7 @@
 // soft penumbra across the real solar disk (same definition as the app numbers:
 // visible fraction of the disk above the terrain horizon).
 
-import { RAMP_GLSL, NIGHT_LOG_MAX } from './ramps';
+import { RAMP_GLSL, NIGHT_LOG_MAX, SLOPE_MAX } from './ramps';
 import { DETAIL_FADE } from './heightfield';
 
 // beyond the LOLA map there is no terrain data: show the rest of the Moon dimmed
@@ -109,6 +109,16 @@ uniform sampler2D uHeat;
 uniform vec4 uHeatGrid;  // half_km, cell_km, n, has
 uniform vec3 uHeatLayers; // from, to, mix
 uniform float uHeatAlpha;
+// detail squares (101 x 101 cells of 100 m) around site A (0) and B (1)
+uniform sampler2D uSq0;
+uniform vec4 uSq0Rect;   // x0_km, y0_km (top edge), extent_km, reveal 0..1
+uniform vec2 uSq0Info;   // n, has
+uniform sampler2D uSq1;
+uniform vec4 uSq1Rect;
+uniform vec2 uSq1Info;
+uniform vec4 uBest0;     // best landing cell centre mx, my (km), cell (km), alpha
+uniform vec4 uBest1;
+uniform float uSlopeLimit; // lander slope limit (deg): steeper cells are hatched on the slope layer
 in vec2 vM;
 in vec3 vW;
 
@@ -172,6 +182,77 @@ vec3 heatColor(float layer, vec4 raw) {
 	return ramp_night(log(1.0 + raw.b) / log(${(1 + NIGHT_LOG_MAX).toFixed(1)}));
 }
 
+#define SLOPE_MAX ${SLOPE_MAX.toFixed(1)}
+
+// Detail square: bilinear between 100 m cell centres (no-data cells skipped). Returns the
+// blend weight (0 outside / not yet revealed); v = raw [sun, earth, night, slope] codes.
+// rim = square outline + the sweeping front of the reveal; grid = cell lines when zoomed in.
+float sqSample(sampler2D tex, vec4 rect, vec2 info, vec2 m, vec2 fm, out vec4 v, out float rim, out float grid) {
+	v = vec4(0.0);
+	rim = 0.0;
+	grid = 0.0;
+	if (info.y < 0.5 || rect.w <= 0.001) return 0.0;
+	vec2 uv = rectUV(rect, m);
+	vec2 q = abs(uv - 0.5) * 2.0;
+	float d = max(q.x, q.y);
+	float px = 2.0 * max(fm.x, fm.y) / rect.z;     // d units per pixel
+	float rev = rect.w * 1.1;
+	float edge = 1.0 - smoothstep(0.0, px * 1.6, abs(d - 1.0));
+	float front = exp(-pow((d - rev) / max(0.025, px * 2.0), 2.0)) * (1.0 - smoothstep(0.7, 1.0, rect.w));
+	rim = max(edge * smoothstep(0.55, 1.0, rect.w), front * step(d, 1.0) * 1.4);
+	if (d >= 1.0) return 0.0;
+	float w = 1.0 - smoothstep(rev - 0.08, rev, d);
+	if (w <= 0.0) return 0.0;
+	int n = int(info.x);
+	vec2 f = uv * info.x - 0.5;
+	ivec2 i0 = ivec2(floor(f));
+	vec2 t = fract(f);
+	vec4 acc = vec4(0.0);
+	float ws = 0.0;
+	for (int k = 0; k < 4; k++) {
+		ivec2 o = ivec2(k & 1, k >> 1);
+		ivec2 c = clamp(i0 + o, ivec2(0), ivec2(n - 1));
+		vec4 s = texelFetch(tex, c, 0) * 255.0;
+		float wk = (o.x == 1 ? t.x : 1.0 - t.x) * (o.y == 1 ? t.y : 1.0 - t.y);
+		if (s.r > 254.5) wk = 0.0;
+		s.a = min(s.a, 254.0);
+		acc += s * wk;
+		ws += wk;
+	}
+	if (ws < 0.25) return 0.0;
+	v = acc / ws;
+	vec2 g = abs(fract(uv * info.x) - 0.5);
+	vec2 fw = fm / rect.z * info.x;              // cells per pixel
+	float line = max(smoothstep(0.5 - fw.x * 1.2, 0.5, g.x), smoothstep(0.5 - fw.y * 1.2, 0.5, g.y));
+	grid = line * (1.0 - smoothstep(0.06, 0.2, max(fw.x, fw.y)));
+	return w;
+}
+
+vec3 layerColor(float L, vec4 raw, float slopeOv, vec4 sv, float sw, out float a) {
+	a = 0.0;
+	if (L < 0.5) return vec3(0.0);
+	vec3 c = vec3(0.0);
+	if (L > 3.5) { c = ramp_slope(slopeOv / SLOPE_MAX); a = 1.0; }
+	else if (raw.a > 0.0) { c = heatColor(L, raw); a = 1.0; }
+	if (sw > 0.0) {
+		vec3 cs = L > 3.5 ? ramp_slope(sv.a * 0.25 / SLOPE_MAX) : heatColor(L, sv);
+		c = a > 0.0 ? mix(c, cs, sw) : cs;
+		a = mix(a, 1.0, sw);
+	}
+	return c;
+}
+
+// outline of the best landing cell
+float bestRing(vec4 b, vec2 m, vec2 fm) {
+	if (b.w <= 0.001) return 0.0;
+	vec2 q = abs(m - b.xy) / (0.5 * b.z);
+	float e = max(q.x, q.y);
+	float px = max(fm.x, fm.y) / (0.5 * b.z);
+	float ring = 1.0 - smoothstep(0.0, max(px * 1.8, 0.08), abs(e - 1.0));
+	float halo = exp(-pow(length(m - b.xy) / (b.z * 1.6), 2.0)) * 0.35;
+	return (ring + halo) * b.w;
+}
+
 void main() {
 	vec2 m = vM;
 	float w;
@@ -226,22 +307,42 @@ void main() {
 
 	col = aces(col * uExposure);
 
-	if (uHeatAlpha > 0.001 && uHeatGrid.w > 0.5) {
-		vec4 raw = heatRaw(m);
-		if (raw.a > 0.0) {
-			float aF = uHeatLayers.x > 0.5 ? 1.0 : 0.0;
-			float aT = uHeatLayers.y > 0.5 ? 1.0 : 0.0;
-			float mixT = uHeatLayers.z;
-			vec3 cF = aF > 0.0 ? heatColor(uHeatLayers.x, raw) : vec3(0.0);
-			vec3 cT = aT > 0.0 ? heatColor(uHeatLayers.y, raw) : vec3(0.0);
-			float a = mix(aF, aT, mixT);
+	float mixT = uHeatLayers.z;
+	float heatOn = (uHeatLayers.x > 0.5 ? 1.0 - mixT : 0.0) + (uHeatLayers.y > 0.5 ? mixT : 0.0);
+	if (uHeatAlpha > 0.001 && heatOn > 0.001) {
+		vec2 fm = fwidth(m);
+		vec4 raw = uHeatGrid.w > 0.5 ? heatRaw(m) : vec4(0.0, 0.0, 0.0, -1.0);
+		float slopeOv = degrees(acos(clamp(dot(N, up), 0.0, 1.0)));
+		vec4 sv;
+		float rim0, grid0, rim1, grid1;
+		float sw = sqSample(uSq0, uSq0Rect, uSq0Info, m, fm, sv, rim0, grid0);
+		vec4 sv1;
+		float sw1 = sqSample(uSq1, uSq1Rect, uSq1Info, m, fm, sv1, rim1, grid1);
+		if (sw1 > sw) { sw = sw1; sv = sv1; grid0 = grid1; }
+		float rim = max(rim0, rim1);
+		float aF, aT;
+		vec3 cF = layerColor(uHeatLayers.x, raw, slopeOv, sv, sw, aF);
+		vec3 cT = layerColor(uHeatLayers.y, raw, slopeOv, sv, sw, aT);
+		float a = mix(aF, aT, mixT);
+		if (a > 0.0) {
 			vec3 hc = (cF * aF * (1.0 - mixT) + cT * aT * mixT) / max(a, 1e-3);
 			hc = pow(hc, vec3(2.2));
 			float relief = pow(clamp(dot(N, up), 0.0, 1.0), 10.0);
 			float lit = clamp(refl * vis * 2.5, 0.0, 1.0);
 			hc *= 0.5 + 0.32 * relief + 0.18 * lit;
-			col = mix(col, aces(hc * 1.6), a * uHeatAlpha * 0.9);
+			// slope layer: hatch cells steeper than the lander limit
+			float onSlope = (uHeatLayers.x > 3.5 ? 1.0 - mixT : 0.0) + (uHeatLayers.y > 3.5 ? mixT : 0.0);
+			if (onSlope > 0.0 && sw > 0.0 && sv.a * 0.25 > uSlopeLimit) {
+				vec2 hp = gl_FragCoord.xy;
+				float hatch = step(0.5, fract((hp.x + hp.y) / 7.0));
+				hc *= 1.0 - 0.45 * hatch * onSlope * sw;
+			}
+			col = mix(col, aces(hc * 1.6), a * uHeatAlpha * (0.9 + 0.08 * sw));
+			col = mix(col, vec3(1.0), grid0 * 0.1 * sw * heatOn);
 		}
+		col += vec3(1.0, 0.93, 0.8) * rim * 0.6 * heatOn * uHeatAlpha;
+		float best = max(bestRing(uBest0, m, fm), bestRing(uBest1, m, fm));
+		col = mix(col, vec3(0.62, 1.0, 0.78), clamp(best, 0.0, 1.0) * heatOn);
 	}
 
 	col *= uFade;
