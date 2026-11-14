@@ -1,0 +1,89 @@
+{
+ "cell_m": 100.0,
+ "n": 101,
+ "heights_m": [
+  2.0,
+  10.0
+ ],
+ "planes": [
+  "sun@2",
+  "earth@2",
+  "night@2",
+  "sun@10",
+  "earth@10",
+  "night@10",
+  "slope"
+ ],
+ "layout": "uint8 planes of n x n, row-major, row 0 at +y (towards lon 0), col 0 at -x; centre cell (n // 2, n // 2) is the site",
+ "sun_earth_scale": "value / 200 = fraction (0.5 % steps); 255 = no data",
+ "night_unit": "days; 253 = 253 days or more; 254 = no sunlight in the whole period; 255 = no data",
+ "slope_unit": "degrees x 4 (254 = 63.5 deg or more); 255 = no data; LOLA 40 m DEM, +-1 pixel",
+ "earth_margin_deg": 1.0,
+ "period_utc": [
+  "2026-11-01T00:00:00Z",
+  "+8766 h"
+ ],
+ "method": "same as the site card: LOLA LDEM_80S_40M, 1440 azimuth bins, rays up to 200 km, hourly SPICE ephemeris (GPU)",
+ "sites": {
+  "cabeus-b-peak": {
+   "lat": -83.6,
+   "lon": 291.2
+  },
+  "haworth": {
+   "lat": -86.7,
+   "lon": 336.3
+  },
+  "malapert-massif": {
+   "lat": -86.0,
+   "lon": 0.3
+  },
+  "mons-mouton-plateau": {
+   "lat": -84.3,
+   "lon": 30.6
+  },
+  "mons-mouton-nobile-rim-1": {
+   "lat": -85.4,
+   "lon": 35.3
+  },
+  "nobile-rim-2": {
+   "lat": -83.9,
+   "lon": 58.7
+  },
+  "de-gerlache-rim-2": {
+   "lat": -88.5,
+   "lon": 293.3
+  },
+  "slater-plain": {
+   "lat": -87.4,
+   "lon": 111.0
+  },
+  "im2-athena": {
+   "lat": -84.7906,
+   "lon": 29.1957
+  },
+  "connecting-ridge-c1": {
+   "lat": -89.4398,
+   "lon": 222.83
+  },
+  "connecting-ridge-c2": {
+   "lat": -89.313,
+   "lon": 245.98
+  },
+  "shackleton-rim": {
+   "lat": -89.6866,
+   "lon": 197.19
+  },
+  "nobile-rim-2-best": {
+   "lat": -84.20156,
+   "lon": 60.69989
+  },
+  "shackleton-floor": {
+   "lat": -89.67,
+   "lon": 129.78
+  },
+  "haworth-floor": {
+   "lat": -87.45,
+   "lon": 354.83
+  }
+ }
+}
