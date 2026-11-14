@@ -1,0 +1,16 @@
+{
+ "cell_km": 1.0,
+ "n": 420,
+ "half_km": 210.0,
+ "layout": "3 planes [sun, earth, night], row-major, row 0 at +y (towards lon 0), col 0 at -x",
+ "sun_earth_scale": "value / 200 = fraction (0.5 % steps); 255 = no data",
+ "night_unit": "days; 253 = 253 days or more; 254 = no sunlight in the whole period; 255 = no data",
+ "observer_height_m": 2.0,
+ "earth_margin_deg": 1.0,
+ "period_utc": [
+  "2026-11-01T00:00:00Z",
+  "+8766 h"
+ ],
+ "method": "LOLA LDEM_80S_80M, 720 azimuth bins, rays up to 150 km, hourly SPICE ephemeris (GPU)",
+ "aggregate": "best of 10 x 10 cells of 100 m (fast map method)"
+}
