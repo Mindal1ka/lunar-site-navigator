@@ -515,6 +515,9 @@
 		break-after: page;
 		transition: none;
 	}
+	.print .slide:last-child {
+		break-after: auto; /* no empty page after the last slide */
+	}
 
 	/* entrance motion: elements with .a animate when their slide is on */
 	.a {

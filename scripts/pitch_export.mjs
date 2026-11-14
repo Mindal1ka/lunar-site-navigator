@@ -39,7 +39,7 @@ for (const lang of ['en', 'uk']) for (const link of [false, true]) {
 	});
 	await sleep(800);
 	const n = (await send('Runtime.evaluate', { expression: 'document.querySelectorAll(".slide").length', returnByValue: true })).result.value;
-	const pdf = await send('Page.printToPDF', { printBackground: true, paperWidth: 20, paperHeight: 11.25, marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0, preferCSSPageSize: false });
+	const pdf = await send('Page.printToPDF', { printBackground: true, paperWidth: 20, paperHeight: 11.25, marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0, preferCSSPageSize: false, pageRanges: `1-${n}` });
 	writeFileSync(join(OUT, `lunar-landing-site-navigator-${sfx}.pdf`), Buffer.from(pdf.data, 'base64'));
 	const dir = join(tmpdir(), `pitch-png-${sfx}`);
 	mkdirSync(dir, { recursive: true });
