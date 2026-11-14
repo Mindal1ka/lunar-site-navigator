@@ -8,6 +8,15 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { Grid, Heatmap } from '#lib/engine/data.ts';
 import type { Vec3 } from '#lib/engine/geo.ts';
 import { R_KM, sceneToMap, upAt } from './coords';
+import { perf, type Tier } from '#lib/perf.svelte.ts';
+
+/** Rendering budget per quality tier: internal resolution cap and shadow ray-march steps.
+ *  'high' is the original look; lower tiers keep the same shading with fewer samples. */
+const TIER: Record<Tier, { maxScale: number; minScale: number; steps: number; mobileSteps: number }> = {
+	high: { maxScale: 1, minScale: 0.55, steps: 128, mobileSteps: 48 },
+	medium: { maxScale: 0.75, minScale: 0.5, steps: 80, mobileSteps: 40 },
+	low: { maxScale: 0.5, minScale: 0.35, steps: 40, mobileSteps: 32 }
+};
 import { Heightfield } from './heightfield';
 import {
 	BODY_FRAG,
@@ -129,7 +138,16 @@ export class SceneEngine {
 	private size = { w: 1, h: 1 };
 	private baseDpr: number;
 	private scale = 1;
+	private maxScale = 1;
+	private tier: Tier = 'high';
+	private terrainMats: THREE.ShaderMaterial[] = [];
 	private frameTimes: number[] = [];
+	private slowWindows = 0;
+	private fastWindows = 0;
+	/** GPU fence of the last submitted frame: never queue a new frame before it finished
+	 *  (software WebGL has no back-pressure, so frames would pile up into multi-second stalls) */
+	private fence: WebGLSync | null = null;
+	private compiling = false;
 	private heatTo: HeatIndex = 0;
 	private lost = false;
 	private destroyed = false;
@@ -145,7 +163,7 @@ export class SceneEngine {
 
 		this.renderer = new THREE.WebGLRenderer({
 			canvas: this.canvas,
-			antialias: true,
+			antialias: perf.tier === 'high',
 			alpha: false,
 			powerPreference: 'high-performance',
 			stencil: false
@@ -153,7 +171,9 @@ export class SceneEngine {
 		this.renderer.autoClear = false;
 		this.renderer.setClearColor(0x020306, 1);
 		this.floatLinear = this.renderer.extensions.has('OES_texture_float_linear');
-		this.baseDpr = Math.min(window.devicePixelRatio || 1, opts.mobile ? 1.5 : 2);
+		this.baseDpr = Math.min(window.devicePixelRatio || 1, perf.tier === 'low' ? 1 : opts.mobile ? 1.5 : 2);
+		this.tier = perf.tier;
+		this.maxScale = this.scale = TIER[this.tier].maxScale;
 
 		this.camera = new THREE.PerspectiveCamera(45, 1, 0.01, 4000);
 		this.camera.position.set(0, 1400, 0.001);
@@ -314,14 +334,33 @@ export class SceneEngine {
 	}
 
 	private terrainMaterial(role: number, rect: THREE.Vector4): THREE.ShaderMaterial {
-		const steps = this.opts.mobile ? 48 : 128;
-		return new THREE.ShaderMaterial({
+		const t = TIER[this.tier];
+		const steps = this.opts.mobile ? t.mobileSteps : t.steps;
+		const mat = new THREE.ShaderMaterial({
 			vertexShader: TERRAIN_VERT,
 			fragmentShader: TERRAIN_FRAG,
 			uniforms: { ...this.U, uRole: { value: role }, uMesh: { value: rect } },
 			defines: { STEPS: steps },
 			side: THREE.DoubleSide
 		});
+		this.terrainMats.push(mat);
+		mat.addEventListener('dispose', () => (this.terrainMats = this.terrainMats.filter((m) => m !== mat)));
+		return mat;
+	}
+
+	/** Switch the rendering budget (called by the frame-time governor). */
+	private applyTier(t: Tier) {
+		if (t === this.tier) return;
+		this.tier = t;
+		const cfg = TIER[t];
+		this.maxScale = cfg.maxScale;
+		this.scale = Math.min(Math.max(this.scale, cfg.minScale), cfg.maxScale);
+		const steps = this.opts.mobile ? cfg.mobileSteps : cfg.steps;
+		for (const m of this.terrainMats) {
+			m.defines.STEPS = steps;
+			m.needsUpdate = true;
+		}
+		this.resize();
 	}
 
 	setOverview(g: Grid & { min_m?: number; max_m?: number }) {
@@ -344,6 +383,15 @@ export class SceneEngine {
 			this.overviewMesh.frustumCulled = false;
 			this.scene.add(this.overviewMesh);
 			this.disposables.push(geo, mat);
+			// link the big terrain shader off the main thread (KHR_parallel_shader_compile) before
+			// the first frame, instead of freezing the page for ~1.4 s on the first render
+			this.compiling = true;
+			Promise.all([this.renderer.compileAsync(this.scene, this.camera), this.renderer.compileAsync(this.sky, this.skyCam)])
+				.catch(() => {})
+				.finally(() => {
+					this.compiling = false;
+					this.invalidate();
+				});
 		}
 		this.invalidate();
 	}
@@ -795,15 +843,25 @@ export class SceneEngine {
 			this.dirty = true;
 		}
 		if (!this.dirty) {
-			// refine: after motion stops, draw once at full resolution
-			if (this.scale < 1 && now - this.lastMotion > 320) {
-				this.scale = 1;
+			// refine: after motion stops, draw once at the tier's full resolution
+			if (this.scale < this.maxScale && now - this.lastMotion > 320) {
+				this.scale = this.maxScale;
 				this.resize();
 			} else return;
+		}
+		if (this.compiling) return;
+		const gl = this.renderer.getContext() as WebGL2RenderingContext;
+		if (this.fence) {
+			// the previous frame is still on the GPU: skip this one (state keeps animating)
+			if (gl.clientWaitSync(this.fence, 0, 0) === gl.TIMEOUT_EXPIRED) return;
+			gl.deleteSync(this.fence);
+			this.fence = null;
 		}
 		this.dirty = false;
 		this.keepAboveGround();
 		this.render();
+		this.fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+		gl.flush();
 		this.adapt(now, moving);
 		this.opts.onFrame();
 	};
@@ -829,15 +887,30 @@ export class SceneEngine {
 			return;
 		}
 		this.frameTimes.push(now);
-		if (this.frameTimes.length < 24) return;
-		const span = (this.frameTimes[this.frameTimes.length - 1] - this.frameTimes[0]) / (this.frameTimes.length - 1);
+		// interval between frames that actually rendered (fence-paced, so it is the real throughput)
+		const n = this.frameTimes.length;
+		if (n < 6 || (n < 20 && now - this.frameTimes[0] < 400)) return;
+		const span = (this.frameTimes[n - 1] - this.frameTimes[0]) / (n - 1);
 		this.frameTimes.length = 0;
-		if (span > 24 && this.scale > 0.55) {
-			this.scale = this.scale > 0.8 ? 0.75 : 0.55;
+		const cfg = TIER[this.tier];
+		if (span > 24 && this.scale > cfg.minScale + 0.01) {
+			this.scale = Math.max(cfg.minScale, this.scale * 0.75);
 			this.resize();
-		} else if (span < 15 && this.scale < 1) {
-			this.scale = this.scale < 0.6 ? 0.75 : 1;
+		} else if (span < 15 && this.scale < this.maxScale) {
+			this.scale = Math.min(this.maxScale, this.scale / 0.75);
 			this.resize();
+		}
+		// governor: sustained slow frames at the lowest resolution -> cheaper tier (and back, with hysteresis)
+		this.slowWindows = span > 40 && this.scale <= cfg.minScale + 0.01 ? this.slowWindows + 1 : 0;
+		this.fastWindows = span < 12 && this.scale >= this.maxScale - 0.01 ? this.fastWindows + 1 : 0;
+		if (this.slowWindows >= 2) {
+			this.slowWindows = 0;
+			perf.step(true);
+			this.applyTier(perf.tier);
+		} else if (this.fastWindows >= 6 && !perf.software) {
+			this.fastWindows = 0;
+			perf.step(false);
+			this.applyTier(perf.tier);
 		}
 	}
 
@@ -926,11 +999,13 @@ export class SceneEngine {
 	private onLost = (e: Event) => {
 		e.preventDefault();
 		this.lost = true;
+		this.fence = null; // syncs die with the context
 		this.opts.onContextLost();
 	};
 
 	private onRestored = () => {
 		this.lost = false;
+		this.fence = null;
 		for (const t of [this.ovTex, this.heatTex, this.placeholder, ...this.detailTex, ...this.sqTex]) if (t) t.needsUpdate = true;
 		this.resize();
 		this.opts.onContextRestored();

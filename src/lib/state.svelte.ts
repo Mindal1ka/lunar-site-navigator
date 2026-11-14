@@ -148,8 +148,14 @@ class AppState {
 			this.nowIndex = now;
 			if (this.preset !== 'custom') this.setPreset(this.preset, now);
 			if (this.t < this.win.i0 || this.t >= this.win.i1) this.t = this.win.i0;
-			loadHeatmap().then((h) => (this.heatmap = h)).catch(() => {});
-			loadHeatmap('heatmap_max').then((h) => (this.heatmapMax = h)).catch(() => {});
+			// heat maps are off by default: fetch them after the first view has settled, not during startup
+			const heat = () => {
+				loadHeatmap().then((h) => (this.heatmap = h)).catch(() => {});
+				loadHeatmap('heatmap_max').then((h) => (this.heatmapMax = h)).catch(() => {});
+			};
+			if (/[?&]heat=/.test(location.search)) heat();
+			else if ('requestIdleCallback' in window) requestIdleCallback(heat, { timeout: 4000 });
+			else setTimeout(heat, 2500);
 		} catch (e) {
 			this.loadError = e instanceof Error ? e.message : String(e);
 		}

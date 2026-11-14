@@ -501,11 +501,34 @@
 
 	// ---------------------------------------------------------------- per-frame overlay
 
+	// the overlay only depends on the camera, the viewport and the marker set: skip frames where
+	// none of them changed (e.g. playback, where only the Sun moves)
+	let overlayKey = '';
+	let occAt = 0;
+	let occTimer: ReturnType<typeof setTimeout> | undefined;
+	const occCache = new Map<string, boolean>();
 	function updateOverlay() {
 		const eng = engine;
 		if (!eng) return;
 		const w = host.clientWidth;
 		const h = host.clientHeight;
+		const cam = eng.camera;
+		const key = `${w}x${h}|${eng.exag}|${app.allSites.length}|${app.bestA?.x},${app.bestA?.y}|${app.bestB?.x},${app.bestB?.y}|${pending ? pending.join(',') : ''}|${cam.matrixWorld.elements.join(',')}|${cam.projectionMatrix.elements.join(',')}`;
+		if (key === overlayKey) return;
+		overlayKey = key;
+		// terrain occlusion is the expensive part: refresh it at most every 120 ms while moving
+		const now = performance.now();
+		const freshOcc = now - occAt > 120;
+		if (freshOcc) occAt = now;
+		else {
+			// make sure the final resting frame gets fresh occlusion
+			clearTimeout(occTimer);
+			occTimer = setTimeout(() => {
+				overlayKey = '';
+				occAt = 0;
+				updateOverlay();
+			}, 140);
+		}
 		for (const s of app.allSites) {
 			const el = markerEls[s.id];
 			if (!el) continue;
@@ -515,7 +538,11 @@
 				el.dataset.state = 'hidden';
 				continue;
 			}
-			const occ = eng.occluded(sitePoint(s, 0.03));
+			let occ = occCache.get(s.id);
+			if (freshOcc || occ === undefined) {
+				occ = eng.occluded(sitePoint(s, 0.03));
+				occCache.set(s.id, occ);
+			}
 			el.style.transform = `translate3d(${sp.x.toFixed(1)}px, ${sp.y.toFixed(1)}px, 0)`;
 			el.style.setProperty('--k', Math.max(0.62, Math.min(1.1, 48 / sp.depth + 0.55)).toFixed(3));
 			el.style.zIndex = String(Math.round(10000 - sp.depth));
