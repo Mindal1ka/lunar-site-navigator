@@ -2,7 +2,7 @@
 // URL state: every shareable choice lives in the query string, so a link reproduces the view.
 //
 //   ?a=<site id | lat,lon>&b=<site id | lat,lon>&h=2&m=1
-//    &from=<ISO>&to=<ISO>&t=<ISO>&mode=planner&view=panorama&lang=uk&heat=sun
+//    &from=<ISO>&to=<ISO>&t=<ISO>&mode=planner&view=panorama&lang=uk&heat=sun&agg=max&slope=10
 //
 // Defaults are left out to keep links short. Call initUrlState() once (client side);
 // it applies UI params at once, waits for app.load() for the rest, then keeps the URL
@@ -10,7 +10,7 @@
 
 import { untrack } from 'svelte';
 import { goto } from '$app/navigation';
-import { app, DEFAULT_HEIGHT_M, LUNAR_MONTH_H, YEAR_H, type HeatLayer, type Mode, type Preset, type View } from './state.svelte.ts';
+import { app, DEFAULT_HEIGHT_M, DEFAULT_MAX_SLOPE, LUNAR_MONTH_H, YEAR_H, type HeatLayer, type Mode, type Preset, type View } from './state.svelte.ts';
 import { indexOf, timeOf } from './engine/visibility';
 import type { Lang, Site } from './engine/data';
 import { parseLatLon } from './topbar/coords';
@@ -18,7 +18,7 @@ import { parseLatLon } from './topbar/coords';
 const MODES: Mode[] = ['simple', 'teacher', 'planner'];
 const VIEWS: View[] = ['map', 'panorama'];
 const LANGS: Lang[] = ['en', 'uk'];
-const HEATS: HeatLayer[] = ['off', 'sun', 'earth', 'night'];
+const HEATS: HeatLayer[] = ['off', 'sun', 'earth', 'night', 'slope'];
 const DEFAULT_MARGIN = 1;
 const DEBOUNCE_MS = 300;
 /** Default site A (the app's initial selection), captured before anything changes it. */
@@ -66,6 +66,9 @@ function applyUi(q: URLSearchParams) {
 	if (view) app.view = view;
 	const heat = pick(q.get('heat'), HEATS);
 	if (heat) app.heatLayer = heat;
+	if (q.get('agg') === 'max') app.heatAggregate = 'max';
+	const sl = Number(q.get('slope'));
+	if (q.has('slope') && Number.isFinite(sl)) app.maxSlopeDeg = Math.max(5, Math.min(20, Math.round(sl)));
 	const m = Number(q.get('m'));
 	if (q.has('m') && Number.isFinite(m)) app.earthMarginDeg = Math.max(0, Math.min(5, m));
 }
@@ -124,6 +127,8 @@ export function buildQuery(full = false): string {
 	if (app.view !== 'map') q.set('view', app.view);
 	if (app.lang !== 'en') q.set('lang', app.lang);
 	if (app.heatLayer !== 'off') q.set('heat', app.heatLayer);
+	if (app.heatAggregate !== 'centre') q.set('agg', app.heatAggregate);
+	if (app.maxSlopeDeg !== DEFAULT_MAX_SLOPE) q.set('slope', String(app.maxSlopeDeg));
 	// keep commas and colons readable in shared links
 	return q.toString().replace(/%2C/gi, ',').replace(/%3A/gi, ':');
 }

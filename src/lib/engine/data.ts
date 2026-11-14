@@ -56,6 +56,8 @@ export interface Heatmap {
 	observer_height_m: number;
 	earth_margin_deg: number;
 	period_utc: [string, string];
+	/** heatmap_max only: how each 1 km cell aggregates its 10 x 10 cells of 100 m */
+	aggregate?: string;
 }
 
 const base = '/data';
@@ -111,13 +113,15 @@ export async function loadSiteTile(id: string): Promise<Grid> {
 	return { ...m.tiles[id], heights: new Int16Array(buf) };
 }
 
-export async function loadHeatmap(): Promise<Heatmap> {
+/** Overview heat map: 'heatmap' (value at the cell centre) or 'heatmap_max' (best in cell). */
+export async function loadHeatmap(name: 'heatmap' | 'heatmap_max' = 'heatmap'): Promise<Heatmap> {
 	const [m, buf] = await Promise.all([
-		json<Omit<Heatmap, 'sun' | 'earth' | 'night'>>('heatmap.json'),
-		bin('heatmap.bin')
+		json<Omit<Heatmap, 'sun' | 'earth' | 'night'>>(`${name}.json`),
+		bin(`${name}.bin`)
 	]);
 	const n2 = m.n * m.n;
 	const u = new Uint8Array(buf);
+	if (u.length !== 3 * n2) throw new Error(`${name}.bin: unexpected size`);
 	return { ...m, sun: u.subarray(0, n2), earth: u.subarray(n2, 2 * n2), night: u.subarray(2 * n2, 3 * n2) };
 }
 

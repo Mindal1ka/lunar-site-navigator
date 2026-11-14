@@ -6,7 +6,7 @@
 -->
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
-	import { fade, fly, scale } from 'svelte/transition';
+	import { fade, fly, scale, slide } from 'svelte/transition';
 	import { cubicOut, backOut } from 'svelte/easing';
 	import { app, type HeatLayer } from '#lib/state.svelte.ts';
 	import { loadSiteTile, type Grid, type Site, type SiteCategory } from '#lib/engine/data.ts';
@@ -15,7 +15,10 @@
 	import { COMMON, fmtMonthYear, fmtNum } from '#lib/i18n.ts';
 	import { SceneEngine, type HeatIndex, type Insets } from '#lib/scene/engine.ts';
 	import { dirToScene, siteToScene } from '#lib/scene/coords.ts';
-	import { nightT, rampCss, type RampLayer } from '#lib/scene/ramps.ts';
+	import { nightT, rampCss, slopeT, type RampLayer } from '#lib/scene/ramps.ts';
+	import { cellAt, nearestHeight, planesFor, squareRgba, type Square } from '#lib/engine/squares.ts';
+	import { latLonToXY } from '#lib/engine/geo.ts';
+	import { surfaceAt } from '#lib/scene/coords.ts';
 
 	const T = {
 		en: {
@@ -27,6 +30,20 @@
 			sun: 'Sunlight',
 			earth: 'Earth',
 			night: 'Night',
+			slope: 'Slope',
+			aggLabel: 'Overview cells (1 km)',
+			aggCentre: 'Cell centre',
+			aggMax: 'Best in cell',
+			aggLine: { centre: 'value at the cell centre', max: 'best of 10 × 10 cells of 100 m' } as Record<string, string>,
+			slopeSrc: 'Detail squares: LOLA 40 m, over 80 m. Elsewhere: approximate, from the 3D terrain.',
+			slopeLimit: (d: number) => `Lander slope limit ${d}°: steeper cells hatched`,
+			sqLine: (p: string) => `Detail squares: 100 m cells, same method as the card, ${p}`,
+			sqFast: (h: number) => `Provisional detail: fast map method, 100 m cells, ${h} m`,
+			sqHeight: (shown: number, card: number) => `Detail computed for ${shown} m; card uses ${card} m`,
+			detail: '100 m detail',
+			slopeApprox: 'approximate, from the 3D terrain',
+			best: 'Best spot',
+			bestAria: (sun: string, slope: string) => `Best landing spot: ${sun} Sun, slope ${slope}. Analyse this spot`,
 			vscale: (n: number) => `Vertical scale ×${n}`,
 			vscaleNote: '(shading uses true heights)',
 			recentre: 'Recentre on the selected sites',
@@ -40,7 +57,8 @@
 			legend: {
 				sun: { title: 'Sunlight', what: 'mean visible share of the solar disk' },
 				earth: { title: 'Earth in view', what: (m: number) => `share of hours with Earth's centre above the horizon + ${m}° antenna margin` },
-				night: { title: 'Longest night', what: 'longest stretch with the Sun fully hidden' }
+				night: { title: 'Longest night', what: 'longest stretch with the Sun fully hidden' },
+				slope: { title: 'Slope', what: 'steepness of the ground, degrees from level' }
 			},
 			heightLine: (h: number) => `Panel/antenna height: ${h} m`,
 			cellLine: (km: number) => `${km} km cells: an overview, site values come from the 40 m horizon`,
@@ -49,7 +67,8 @@
 				shadows: 'Why the long shadows? At the pole the Sun never climbs more than about 1.5° above the horizon, so every hill casts a shadow kilometres long. Shadows here are traced on real LOLA heights.',
 				sun: 'Why so patchy? With the Sun skimming the horizon, a ridge a few hundred metres high decides whether a spot gets light. Crater floors can stay dark for years.',
 				earth: 'Why does the Earth come and go? From the south pole the Earth hangs low on the horizon and rocks up and down as the Moon wobbles (libration), so hills block it part of the time.',
-				night: 'Why are some nights so long? Deep craters hide the Sun for months or forever, while high ridges between them have nights of only a few days.'
+				night: 'Why are some nights so long? Deep craters hide the Sun for months or forever, while high ridges between them have nights of only a few days.',
+				slope: 'Why does slope matter? A lander needs fairly level ground. The sunniest spots are usually ridge crests, which are often too steep or too narrow to land on, so the best landing spot is a compromise.'
 			},
 			elev: 'Elevation (LOLA)',
 			clickA: (s: string) => `Click to analyse this point as ${s}`,
@@ -75,6 +94,20 @@
 			sun: 'Сонце',
 			earth: 'Земля',
 			night: 'Ніч',
+			slope: 'Нахил',
+			aggLabel: 'Комірки огляду (1 км)',
+			aggCentre: 'Центр комірки',
+			aggMax: 'Найкраще в комірці',
+			aggLine: { centre: 'значення в центрі комірки', max: 'найкраще з 10 × 10 комірок по 100 м' } as Record<string, string>,
+			slopeSrc: 'Детальні квадрати: LOLA 40 м, на відрізку 80 м. Деінде — приблизно, з 3D-рельєфу.',
+			slopeLimit: (d: number) => `Межа нахилу для посадки ${d}°: крутіші комірки заштриховано`,
+			sqLine: (p: string) => `Детальні квадрати: комірки 100 м, той самий метод, що й у картці, ${p}`,
+			sqFast: (h: number) => `Попередня деталізація: швидкий метод карти, комірки 100 м, ${h} м`,
+			sqHeight: (shown: number, card: number) => `Деталізацію пораховано для ${shown} м; картка — для ${card} м`,
+			detail: 'Деталізація 100 м',
+			slopeApprox: 'приблизно, з 3D-рельєфу',
+			best: 'Найкраще місце',
+			bestAria: (sun: string, slope: string) => `Найкраще місце посадки: Сонце ${sun}, нахил ${slope}. Проаналізувати це місце`,
 			vscale: (n: number) => `Вертикальний масштаб ×${n}`,
 			vscaleNote: '(освітлення — за справжніми висотами)',
 			recentre: 'Повернутися до вибраних місць',
@@ -88,7 +121,8 @@
 			legend: {
 				sun: { title: 'Сонце', what: 'середня видима частка сонячного диска' },
 				earth: { title: 'Земля видна', what: (m: number) => `частка годин, коли центр Землі вище горизонту + ${m}° запасу антени` },
-				night: { title: 'Найдовша ніч', what: 'найдовший відрізок, коли Сонце повністю сховане' }
+				night: { title: 'Найдовша ніч', what: 'найдовший відрізок, коли Сонце повністю сховане' },
+				slope: { title: 'Нахил', what: 'крутизна ґрунту, градуси від горизонталі' }
 			},
 			heightLine: (h: number) => `Висота панелі/антени: ${h} м`,
 			cellLine: (km: number) => `Комірки ${km} км: огляд, значення для місць — з горизонту 40 м`,
@@ -97,7 +131,8 @@
 				shadows: 'Чому такі довгі тіні? На полюсі Сонце не підіймається вище приблизно 1,5° над горизонтом, тож кожен пагорб кидає тінь на кілометри. Тіні тут пораховано за справжніми висотами LOLA.',
 				sun: 'Чому так плямисто? Коли Сонце ковзає над горизонтом, гребінь заввишки кілька сотень метрів вирішує, чи буде світло. Дно кратерів може лишатися темним роками.',
 				earth: 'Чому Земля то видна, то ні? З південного полюса Земля висить низько над горизонтом і гойдається вгору-вниз через лібрацію Місяця, тож пагорби часом її закривають.',
-				night: 'Чому деякі ночі такі довгі? Глибокі кратери ховають Сонце на місяці або назавжди, а на високих гребенях між ними ніч триває лише кілька днів.'
+				night: 'Чому деякі ночі такі довгі? Глибокі кратери ховають Сонце на місяці або назавжди, а на високих гребенях між ними ніч триває лише кілька днів.',
+				slope: 'Чому важливий нахил? Апаратові потрібен досить рівний ґрунт. Найосвітленіші місця — зазвичай гребені хребтів, які часто надто круті або вузькі для посадки, тож найкраще місце посадки — це компроміс.'
 			},
 			elev: 'Висота (LOLA)',
 			clickA: (s: string) => `Клацніть, щоб проаналізувати точку як ${s}`,
@@ -118,7 +153,7 @@
 	const t = $derived(T[app.lang]);
 	const cm = $derived(COMMON[app.lang]);
 
-	const HEAT_ORDER: HeatLayer[] = ['off', 'sun', 'earth', 'night'];
+	const HEAT_ORDER: HeatLayer[] = ['off', 'sun', 'earth', 'night', 'slope'];
 	const EXAGS = [1, 2, 4];
 	const CAT_COLOR: Record<SiteCategory, string> = {
 		artemis: '#8fb8ff',
@@ -157,6 +192,7 @@
 		};
 	}
 	let pendingEl = $state<HTMLElement | null>(null);
+	const bestEls: (HTMLElement | null)[] = $state([null, null]);
 	let pending: Vec3 | null = null;
 
 	interface Hover {
@@ -166,6 +202,8 @@
 		lon: number;
 		elev: number;
 		heat: number | null;
+		/** the value comes from a 100 m detail square (with its shown height) */
+		sq: { h: number; fast: boolean } | null;
 	}
 	let hover = $state<Hover | null>(null);
 	let ripples = $state<{ id: number; x: number; y: number }[]>([]);
@@ -175,22 +213,29 @@
 
 	const heatIndex = $derived(HEAT_ORDER.indexOf(app.heatLayer));
 	const exagIndex = $derived(Math.max(0, EXAGS.indexOf(app.exaggeration)));
-	const heatReady = $derived(!!app.heatmap);
+	const heatReady = $derived(!!app.heatmap || !!app.squareA || !!app.squareB);
+	const anySquare = $derived(app.squareA ?? app.squareB);
 	const slotLabel = $derived(app.pickSlot);
 
-	const heatPeriod = $derived.by(() => {
-		const h = app.heatmap;
-		if (!h) return '';
-		const start = new Date(h.period_utc[0]);
-		const m = /([+-]?\d+(?:\.\d+)?)\s*h/.exec(h.period_utc[1] ?? '');
-		const end = m ? new Date(start.getTime() + parseFloat(m[1]) * 3600e3) : new Date(h.period_utc[1]);
+	function periodText(p: [string, string] | undefined): string {
+		if (!p) return '';
+		const start = new Date(p[0]);
+		const m = /([+-]?\d+(?:\.\d+)?)\s*h/.exec(p[1] ?? '');
+		const end = m ? new Date(start.getTime() + parseFloat(m[1]) * 3600e3) : new Date(p[1]);
 		if (isNaN(start.getTime()) || isNaN(end.getTime())) return '';
 		return `${fmtMonthYear(start)} – ${fmtMonthYear(end)}`;
-	});
+	}
+	const heatPeriod = $derived(periodText(app.heatShown?.period_utc));
+	function sqPeriod(sq: Square): string {
+		const a = new Date(sq.startUnix * 1000);
+		const b = new Date((sq.startUnix + sq.hours * 3600) * 1000);
+		return `${fmtMonthYear(a)} – ${fmtMonthYear(b)}`;
+	}
 
 	const legendTicks = $derived.by(() => {
 		const L = app.heatLayer;
 		if (L === 'night') return [1, 4, 15, 60, 250].map((d) => ({ pos: nightT(d) * 100, label: `${d} ${t.days}` }));
+		if (L === 'slope') return [0, 5, 10, 15, 20, 30].map((d) => ({ pos: slopeT(d) * 100, label: `${d}°` }));
 		return [0, 25, 50, 75, 100].map((v) => ({ pos: v, label: `${v} %` }));
 	});
 
@@ -321,13 +366,56 @@
 		engine?.setObserverHeight(h);
 	});
 	$effect(() => {
-		const hm = app.heatmap;
+		const hm = app.heatShown;
 		const eng = engine;
 		if (eng) untrack(() => eng.setHeatmap(hm));
 	});
 	$effect(() => {
-		const i = (app.heatmap ? HEAT_ORDER.indexOf(app.heatLayer) : 0) as HeatIndex;
+		const i = HEAT_ORDER.indexOf(app.heatLayer) as HeatIndex;
 		engine?.setHeatLayer(i);
+	});
+
+	// 100 m detail squares around A and B, for the plane nearest to the panel height
+	const sqShown: (string | null)[] = [null, null];
+	$effect(() => {
+		const eng = engine;
+		const list = [app.squareA, app.squareB];
+		const h = app.heightM;
+		if (!eng) return;
+		untrack(() =>
+			list.forEach((sq, i) => {
+				const slot = i as 0 | 1;
+				const k = sq ? `${sq.key}|${sq.kind}|${nearestHeight(sq, h)}` : null;
+				if (k === sqShown[slot]) return;
+				sqShown[slot] = k;
+				if (!sq) return eng.setSquare(slot, null);
+				const half = (sq.n / 2) * sq.cellM;
+				eng.setSquare(slot, {
+					key: sq.key,
+					n: sq.n,
+					rgba: squareRgba(sq, h),
+					x0Km: (sq.cx - half) / 1000,
+					y0Km: (sq.cy + half) / 1000,
+					extKm: (sq.n * sq.cellM) / 1000
+				});
+			})
+		);
+	});
+	$effect(() => {
+		const eng = engine;
+		const spots = [app.bestA, app.bestB];
+		const sqs = [app.squareA, app.squareB];
+		if (!eng) return;
+		untrack(() =>
+			spots.forEach((b, i) => {
+				const sq = sqs[i];
+				eng.setBestSpot(i as 0 | 1, b && sq ? { key: `${sq.key}|${b.r},${b.c}`, mx: b.x / 1000, my: b.y / 1000, cellKm: sq.cellM / 1000 } : null);
+			})
+		);
+	});
+	$effect(() => {
+		const d = app.maxSlopeDeg;
+		engine?.setSlopeLimit(d);
 	});
 	$effect(() => {
 		const v = app.view === 'map';
@@ -434,6 +522,24 @@
 			el.dataset.state = occ ? 'occluded' : 'visible';
 			el.classList.toggle('flip', sp.x > w - 190);
 		}
+		const spots = [app.bestA, app.bestB];
+		for (let k = 0; k < 2; k++) {
+			const el = bestEls[k];
+			const b = spots[k];
+			if (!el || !b) continue;
+			const mx = b.x / 1000;
+			const my = b.y / 1000;
+			const elev = eng.hf.inside(mx, my) ? eng.hf.heightM(mx, my) : 0;
+			const p = surfaceAt(mx, my, (elev / 1000) * eng.exag + 0.004);
+			const sp = eng.project(p);
+			if (!sp || sp.x < -60 || sp.y < -60 || sp.x > w + 60 || sp.y > h + 60) {
+				el.dataset.state = 'hidden';
+				continue;
+			}
+			el.style.transform = `translate3d(${sp.x.toFixed(1)}px, ${sp.y.toFixed(1)}px, 0)`;
+			el.style.setProperty('--k', Math.max(0.7, Math.min(1.1, 48 / sp.depth + 0.6)).toFixed(3));
+			el.dataset.state = eng.occluded(surfaceAt(mx, my, (elev / 1000) * eng.exag + 0.03)) ? 'occluded' : 'visible';
+		}
 		if (pendingEl && pending) {
 			const sp = eng.project(pending);
 			if (sp) pendingEl.style.transform = `translate3d(${sp.x.toFixed(1)}px, ${sp.y.toFixed(1)}px, 0)`;
@@ -457,17 +563,39 @@
 		const [lat, lon] = xyToLatLon(hit.mx * 1000, hit.my * 1000);
 		const elev = eng.hf.heightM(hit.mx, hit.my);
 		let heat: number | null = null;
-		const hm = app.heatmap;
-		if (hm && app.heatLayer !== 'off') {
-			const col = Math.floor((hit.mx + hm.half_km) / hm.cell_km);
-			const row = Math.floor((hm.half_km - hit.my) / hm.cell_km);
-			if (col >= 0 && row >= 0 && col < hm.n && row < hm.n) {
-				const v = hm[app.heatLayer][row * hm.n + col];
-				heat = v === 255 ? null : app.heatLayer === 'night' ? v : v / 2;
+		let sqInfo: Hover['sq'] = null;
+		const L = app.heatLayer;
+		if (L !== 'off') {
+			// inside a detail square: its 100 m cell (same method as the card)
+			for (const sq of [app.squareA, app.squareB]) {
+				if (!sq) continue;
+				const cell = cellAt(sq, hit.mx * 1000, hit.my * 1000);
+				if (!cell) continue;
+				const P = planesFor(sq, app.heightM);
+				const v = P[L][cell.r * sq.n + cell.c];
+				heat = v === 255 ? null : L === 'night' ? v : L === 'slope' ? v / 4 : v / 2;
+				sqInfo = { h: P.heightM, fast: sq.kind === 'fast' };
+				break;
+			}
+			if (!sqInfo) {
+				const hm = app.heatShown;
+				if (L === 'slope') {
+					const e = 0.04;
+					const gx = (eng.hf.heightM(hit.mx + e, hit.my) - eng.hf.heightM(hit.mx - e, hit.my)) / (2 * e * 1000);
+					const gy = (eng.hf.heightM(hit.mx, hit.my + e) - eng.hf.heightM(hit.mx, hit.my - e)) / (2 * e * 1000);
+					heat = (Math.atan(Math.hypot(gx, gy)) * 180) / Math.PI;
+				} else if (hm) {
+					const col = Math.floor((hit.mx + hm.half_km) / hm.cell_km);
+					const row = Math.floor((hm.half_km - hit.my) / hm.cell_km);
+					if (col >= 0 && row >= 0 && col < hm.n && row < hm.n) {
+						const v = hm[L][row * hm.n + col];
+						heat = v === 255 ? null : L === 'night' ? v : v / 2;
+					}
+				}
 			}
 		}
 		const r = host.getBoundingClientRect();
-		return { x: clientX - r.left, y: clientY - r.top, lat, lon, elev, heat };
+		return { x: clientX - r.left, y: clientY - r.top, lat, lon, elev, heat, sq: sqInfo };
 	}
 
 	function onPointerDown(e: PointerEvent) {
@@ -565,7 +693,7 @@
 	});
 
 	function setHeat(l: HeatLayer) {
-		if (l !== 'off' && !heatReady) return;
+		if (l !== 'off' && l !== 'slope' && !heatReady) return;
 		app.heatLayer = l;
 	}
 
@@ -576,6 +704,7 @@
 		return t.lon(fmtNum(v, 2));
 	}
 	function heatFmt(v: number) {
+		if (app.heatLayer === 'slope') return `${fmtNum(v, 1)}°`;
 		if (app.heatLayer !== 'night') return `${fmtNum(v, v < 10 ? 1 : 0)} %`;
 		// night plane: 254 = no sunlight in the whole period, 253 = 253 days or more (see pipeline/heatmap.py)
 		if (v === 254) return t.allDark;
@@ -586,8 +715,14 @@
 		off: 'rgba(255,255,255,0.14)',
 		sun: 'var(--sun)',
 		earth: 'var(--earth)',
-		night: '#8f7fd6'
+		night: '#8f7fd6',
+		slope: '#7fe0b0'
 	};
+	function analyseBest(slot: 0 | 1) {
+		const b = slot === 0 ? app.bestA : app.bestB;
+		if (!b || app.pointBusy) return;
+		app.addCustomPoint(b.lat, b.lon, slot === 0 ? 'A' : 'B');
+	}
 </script>
 
 <svelte:window onkeydown={onWindowKey} />
@@ -645,6 +780,24 @@
 			</button>
 		{/each}
 
+		<!-- best landing spot inside each detail square (visible with a heat layer) -->
+		{#each [app.bestA, app.bestB] as b, k (k)}
+			{#if b && introDone && app.heatLayer !== 'off'}
+				<button
+					class="best"
+					class:b={k === 1}
+					data-state="hidden"
+					bind:this={bestEls[k]}
+					aria-label={t.bestAria(`${fmtNum(b.sunPct, 1)} %`, `${fmtNum(b.slopeDeg, 1)}°`)}
+					title={t.bestAria(`${fmtNum(b.sunPct, 1)} %`, `${fmtNum(b.slopeDeg, 1)}°`)}
+					onclick={() => analyseBest(k as 0 | 1)}
+				>
+					<svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.6 6.1 6.6.6-5 4.4 1.5 6.5L12 17l-5.7 3.4 1.5-6.5-5-4.4 6.6-.6z" /></svg>
+					<span class="btag" aria-hidden="true">{t.best} · <b class="num">{fmtNum(b.sunPct, 1)} %</b></span>
+				</button>
+			{/if}
+		{/each}
+
 		{#if app.pointBusy}
 			<div class="pending" bind:this={pendingEl} transition:scale={{ duration: 260, start: 0.6 }} role="status">
 				<span class="spin" aria-hidden="true"></span>
@@ -667,12 +820,20 @@
 		>
 			<div class="coord mono">{fmtLat(hover.lat)} · {fmtLon(hover.lon)}</div>
 			<div class="row"><span>{t.elev}</span><b class="num">{fmtNum(hover.elev)} m</b></div>
-			{#if app.heatLayer !== 'off' && app.heatmap}
+			{#if app.heatLayer !== 'off' && (app.heatShown || hover.sq || app.heatLayer === 'slope')}
 				<div class="row" style="--tint: {heatTint[app.heatLayer]}">
 					<span><i class="sw"></i>{t.legend[legendKey].title}</span>
 					<b class="num">{hover.heat === null ? '—' : heatFmt(hover.heat)}</b>
 				</div>
-				<div class="meta">{t.heightLine(app.heatmap.observer_height_m)} · {heatPeriod}</div>
+				{#if hover.sq}
+					<div class="meta">
+						{hover.sq.fast ? t.sqFast(hover.sq.h) : t.detail}{#if app.heatLayer !== 'slope'} · {t.heightLine(hover.sq.h)} · {anySquare ? sqPeriod(anySquare) : ''}{/if}
+					</div>
+				{:else if app.heatLayer === 'slope'}
+					<div class="meta">{t.slopeApprox}</div>
+				{:else if app.heatShown}
+					<div class="meta">{t.heightLine(app.heatShown.observer_height_m)} · {heatPeriod}</div>
+				{/if}
 			{/if}
 			<div class="hint">{t.clickA(slotLabel)}</div>
 		</div>
@@ -709,7 +870,7 @@
 					<div class="group">
 						<div class="glabel label" id="heat-label">{t.heat}</div>
 						<div
-							class="seg four"
+							class="seg five"
 							role="group"
 							aria-labelledby="heat-label"
 							style="--i: {heatIndex}; --tint: {heatTint[app.heatLayer]}"
@@ -719,8 +880,8 @@
 								<button
 									aria-pressed={app.heatLayer === l}
 									class:active={app.heatLayer === l}
-									disabled={l !== 'off' && !heatReady}
-									title={l !== 'off' && !heatReady ? t.noHeat : undefined}
+									disabled={l !== 'off' && l !== 'slope' && !heatReady}
+									title={l !== 'off' && l !== 'slope' && !heatReady ? t.noHeat : undefined}
 									onclick={() => setHeat(l)}
 								>
 									{#if l !== 'off'}<i class="chip {l}" aria-hidden="true"></i>{/if}
@@ -729,6 +890,19 @@
 							{/each}
 						</div>
 						{#if !heatReady}<div class="note">{t.noHeat}</div>{/if}
+						{#if app.heatmapMax && app.heatLayer !== 'off' && app.heatLayer !== 'slope'}
+							<div class="agg" transition:slide={{ duration: 260, easing: cubicOut }}>
+								<span class="sub" id="agg-label">{t.aggLabel}</span>
+								<div class="seg two" role="group" aria-labelledby="agg-label" style="--i: {app.heatAggregate === 'max' ? 1 : 0}">
+									<span class="thumb" aria-hidden="true"></span>
+									{#each ['centre', 'max'] as const as g (g)}
+										<button aria-pressed={app.heatAggregate === g} class:active={app.heatAggregate === g} onclick={() => (app.heatAggregate = g)}>
+											{g === 'centre' ? t.aggCentre : t.aggMax}
+										</button>
+									{/each}
+								</div>
+							</div>
+						{/if}
 					</div>
 
 					<div class="group">
@@ -781,26 +955,52 @@
 	{/if}
 
 	<!-- heat map legend -->
-	{#if introDone && app.heatLayer !== 'off' && app.heatmap && (!mobile || !panelOpen)}
-		{@const hm = app.heatmap}
+	{#if introDone && app.heatLayer !== 'off' && (app.heatShown || anySquare || app.heatLayer === 'slope') && (!mobile || !panelOpen)}
+		{@const hm = app.heatShown}
+		{@const sq = anySquare}
 		<div class="legend glass" transition:fly={{ y: 14, duration: 420, easing: cubicOut }} role="note">
 			<div class="lhead" style="--tint: {heatTint[app.heatLayer]}">
 				<i class="sw"></i>
 				<span class="ltitle">{t.legend[legendKey].title}</span>
 			</div>
 			<div class="lwhat">
-				{legendKey === 'earth' ? t.legend.earth.what(hm.earth_margin_deg) : t.legend[legendKey === 'sun' ? 'sun' : 'night'].what}
+				{legendKey === 'earth'
+					? t.legend.earth.what(sq?.marginDeg ?? hm?.earth_margin_deg ?? app.earthMarginDeg)
+					: t.legend[legendKey === 'sun' ? 'sun' : legendKey === 'slope' ? 'slope' : 'night'].what}
 			</div>
-			<div class="bar" style="background: {rampCss(legendKey)}"></div>
+			<div class="bar" style="background: {rampCss(legendKey)}">
+				{#if legendKey === 'slope'}
+					<span class="limit" style="left: {slopeT(app.maxSlopeDeg) * 100}%" aria-hidden="true"></span>
+				{/if}
+			</div>
 			<div class="ticks mono">
 				{#each legendTicks as tk (tk.label)}
 					<span style="left: {tk.pos}%">{tk.label}</span>
 				{/each}
 			</div>
-			<div class="lmeta">{t.heightLine(hm.observer_height_m)} · {heatPeriod}</div>
-			<div class="lmeta">{t.cellLine(hm.cell_km)}</div>
-			{#if app.heightM !== hm.observer_height_m}
-				<div class="lnote">{t.mismatch(hm.observer_height_m)}</div>
+			{#if legendKey === 'slope'}
+				<div class="lmeta">{t.slopeSrc}</div>
+				<div class="lmeta">{t.slopeLimit(app.maxSlopeDeg)}</div>
+			{:else}
+				{#if sq}
+					{@const shown = nearestHeight(sq, app.heightM)}
+					<div class="lsq">
+						<i class="sqi" aria-hidden="true"></i>
+						<div>
+							<div class="lmeta">{sq.kind === 'fast' ? t.sqFast(shown) : t.sqLine(sqPeriod(sq))}</div>
+							<div class={shown === app.heightM ? 'lmeta' : 'lnote keep'}>
+								{shown === app.heightM ? t.heightLine(shown) : t.sqHeight(shown, app.heightM)}
+							</div>
+						</div>
+					</div>
+				{/if}
+				{#if hm}
+					<div class="lmeta">{t.heightLine(hm.observer_height_m)} · {heatPeriod}</div>
+					<div class="lmeta ovcells">{t.cellLine(hm.cell_km)}{app.heatmapMax ? ` · ${t.aggLine[app.heatShown === app.heatmapMax ? 'max' : 'centre']}` : ''}</div>
+					{#if app.heightM !== hm.observer_height_m}
+						<div class="lnote">{t.mismatch(hm.observer_height_m)}</div>
+					{/if}
+				{/if}
 			{/if}
 			{#if app.mode === 'teacher'}
 				<p class="why">{t.why[legendKey]}</p>
@@ -1408,6 +1608,7 @@
 		margin: 3px 0 10px;
 	}
 	.bar {
+		position: relative;
 		height: 10px;
 		border-radius: var(--radius-pill);
 		box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
@@ -1437,6 +1638,172 @@
 	}
 	.legend .why {
 		margin-top: 10px;
+	}
+
+	.seg.five {
+		--n: 5;
+	}
+	.seg.five button {
+		padding: 0 2px;
+		gap: 4px;
+		font-size: 12px;
+	}
+	.seg.two {
+		--n: 2;
+		flex: 1;
+	}
+	.seg.two .thumb {
+		--tint: rgba(255, 255, 255, 0.45);
+	}
+	.seg.two button {
+		height: 28px;
+		font-size: 11.5px;
+	}
+	.agg {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+	.agg .sub {
+		font-size: 11px;
+		color: var(--text-3);
+		flex: none;
+		max-width: 92px;
+		line-height: 1.25;
+	}
+	.chip.slope {
+		background: #7fe0b0;
+	}
+	.bar .limit {
+		position: absolute;
+		top: -4px;
+		bottom: -4px;
+		width: 2px;
+		margin-left: -1px;
+		border-radius: 1px;
+		background: #fff;
+		box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+		transition: left var(--dur) var(--ease-out);
+	}
+	.lsq {
+		display: flex;
+		gap: 8px;
+		align-items: flex-start;
+		margin-top: 6px;
+		margin-bottom: 2px;
+		padding: 7px 9px;
+		border-radius: var(--radius-sm);
+		background: rgba(255, 240, 220, 0.04);
+		border: 1px solid rgba(255, 240, 220, 0.12);
+		animation: lsq-in 600ms var(--ease-out) both;
+	}
+	.lsq .lmeta,
+	.lsq .lnote {
+		margin-top: 0;
+	}
+	.sqi {
+		flex: none;
+		width: 12px;
+		height: 12px;
+		margin-top: 2px;
+		border-radius: 2px;
+		border: 1.5px solid #ffeed8;
+		box-shadow: 0 0 8px rgba(255, 238, 216, 0.6);
+		background:
+			linear-gradient(rgba(255, 238, 216, 0.35) 1px, transparent 1px) 0 0 / 4px 4px,
+			linear-gradient(90deg, rgba(255, 238, 216, 0.35) 1px, transparent 1px) 0 0 / 4px 4px;
+	}
+	@keyframes lsq-in {
+		from {
+			opacity: 0;
+			transform: translateY(4px);
+		}
+	}
+
+	/* ---------- best landing spot marker */
+	.best {
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 0;
+		height: 0;
+		padding: 0;
+		border: 0;
+		background: none;
+		z-index: 9000;
+		color: #9fffc8;
+		transition: opacity var(--dur) var(--ease-out);
+	}
+	.best:global([data-state='hidden']) {
+		opacity: 0;
+		pointer-events: none;
+	}
+	.best:global([data-state='occluded']) {
+		opacity: 0.35;
+	}
+	.best .star {
+		position: absolute;
+		left: -11px;
+		top: -11px;
+		width: 22px;
+		height: 22px;
+		fill: currentColor;
+		stroke: #05261a;
+		stroke-width: 1.2;
+		transform: scale(var(--k, 1));
+		filter: drop-shadow(0 0 6px rgba(120, 255, 180, 0.75));
+		animation:
+			best-in 700ms var(--ease-spring) both,
+			best-pulse 2.4s var(--ease-in-out) 700ms infinite;
+		transition: transform var(--dur) var(--ease-spring);
+		cursor: pointer;
+		pointer-events: auto;
+	}
+	.best:hover .star,
+	.best:focus-visible .star {
+		transform: scale(calc(var(--k, 1) * 1.25));
+	}
+	.best.b {
+		color: #e2c8ff;
+	}
+	.btag {
+		position: absolute;
+		left: 16px;
+		top: 0;
+		transform: translateY(-50%);
+		white-space: nowrap;
+		font-size: 11.5px;
+		color: var(--text-2);
+		padding: 4px 9px;
+		border-radius: var(--radius-pill);
+		background: rgba(8, 11, 18, 0.8);
+		border: 1px solid rgba(159, 255, 200, 0.28);
+		opacity: 0;
+		translate: -4px 0;
+		transition:
+			opacity var(--dur-fast) var(--ease-out),
+			translate var(--dur) var(--ease-out);
+		pointer-events: none;
+	}
+	.btag b {
+		color: var(--text);
+	}
+	.best:hover .btag,
+	.best:focus-visible .btag {
+		opacity: 1;
+		translate: 0 0;
+	}
+	@keyframes best-in {
+		from {
+			scale: 0.2;
+			rotate: -90deg;
+			opacity: 0;
+		}
+	}
+	@keyframes best-pulse {
+		50% {
+			filter: drop-shadow(0 0 12px rgba(120, 255, 180, 0.95));
+		}
 	}
 
 	/* ---------- toast / centre messages */
@@ -1525,8 +1892,14 @@
 			bottom: auto;
 		}
 		.legend .why,
-		.lnote {
+		.lnote:not(.keep) {
 			display: none;
+		}
+		.legend .ovcells {
+			display: none;
+		}
+		.lsq {
+			padding: 5px 8px;
 		}
 		.toast {
 			top: calc(var(--topbar-h) + var(--timeline-h) + var(--gutter) * 3);
@@ -1537,6 +1910,9 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
+		.best .star {
+			animation: none;
+		}
 		.marker.a .ring,
 		.marker.b .ring {
 			animation: none;

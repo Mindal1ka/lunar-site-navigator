@@ -18,6 +18,7 @@
 	import HeightControl from '#lib/card/HeightControl.svelte';
 	import MarginControl from '#lib/card/MarginControl.svelte';
 	import NowReadout from '#lib/card/NowReadout.svelte';
+	import DetailSquare from '#lib/card/DetailSquare.svelte';
 	import ValidationPanel from './ValidationPanel.svelte';
 
 	const t = $derived(T[app.lang]);
@@ -123,6 +124,7 @@
 				<div class="metrics-wrap">
 					<Metrics bind:focus selectable={teacher} />
 				</div>
+				<DetailSquare part="head" />
 			{:else}
 				<div class="skel tiles" aria-hidden="true"><span></span><span></span><span></span></div>
 			{/if}
@@ -148,6 +150,8 @@
 				</div>
 			</div>
 		{/if}
+
+		<DetailSquare part="body" />
 
 		{#if A}
 			<div class="secondary" class:grid={planner}>

@@ -20,6 +20,7 @@
 	onMount(() => {
 		app.load();
 		const stopUrl = initUrlState();
+		const stopSquares = app.startSquares();
 		// playback: advance the time cursor in real time while playing
 		let raf = 0;
 		let last = performance.now();
@@ -38,6 +39,7 @@
 		return () => {
 			cancelAnimationFrame(raf);
 			stopUrl();
+			stopSquares();
 		};
 	});
 </script>
