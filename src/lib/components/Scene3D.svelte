@@ -40,6 +40,8 @@
 			aggCentre: 'Cell centre',
 			aggMax: 'Best in cell',
 			aggLine: { centre: 'value at the cell centre', max: 'best of 10 × 10 cells of 100 m' } as Record<string, string>,
+			legendMore: 'Show legend details',
+			legendLess: 'Hide legend details',
 			slopeSrc: 'Detail squares: steepest 80 m plane within each 100 m cell (LOLA 40 m). Elsewhere: approximate, from the 3D terrain.',
 			slopeLimit: (d: number) => `Lander slope limit ${d}°: steeper cells hatched`,
 			sqLine: (p: string) => `Detail squares: 100 m cells, same method as the card, ${p}`,
@@ -104,6 +106,8 @@
 			aggCentre: 'Центр комірки',
 			aggMax: 'Найкраще в комірці',
 			aggLine: { centre: 'значення в центрі комірки', max: 'найкраще з 10 × 10 комірок по 100 м' } as Record<string, string>,
+			legendMore: 'Показати подробиці легенди',
+			legendLess: 'Сховати подробиці легенди',
 			slopeSrc: 'Детальні квадрати: найкрутіша площина 80 м у межах комірки 100 м (LOLA 40 м). Деінде — приблизно, з 3D-рельєфу.',
 			slopeLimit: (d: number) => `Межа нахилу для посадки ${d}°: крутіші комірки заштриховано`,
 			sqLine: (p: string) => `Детальні квадрати: комірки 100 м, той самий метод, що й у картці, ${p}`,
@@ -181,6 +185,8 @@
 		return () => clearTimeout(id);
 	});
 	let mobile = $state(false);
+	// legend details (text under the colour bar); folded by default on phones and touch screens
+	let legendFull = $state(true);
 	let coarse = $state(false);
 	let reduced = false;
 	let panelOpen = $state(true);
@@ -297,6 +303,7 @@
 		coarse = mqCoarse.matches;
 		reduced = mqReduced.matches;
 		panelOpen = !mobile;
+		legendFull = !(mobile || coarse);
 
 		let eng: SceneEngine;
 		try {
@@ -999,11 +1006,21 @@
 		{@const hm = app.heatShown}
 		{@const sq = anySquare}
 		<div class="legend glass" transition:fly={{ y: 14, duration: 420, easing: cubicOut }} role="note">
-			<div class="lhead" style="--tint: {heatTint[app.heatLayer]}">
+			<button
+				type="button"
+				class="lhead"
+				style="--tint: {heatTint[app.heatLayer]}"
+				aria-expanded={legendFull}
+				title={legendFull ? t.legendLess : t.legendMore}
+				onclick={() => (legendFull = !legendFull)}
+			>
 				<i class="sw"></i>
 				<span class="ltitle">{t.legend[legendKey].title}</span>
-			</div>
-			<div class="lwhat">
+				<span class="lchev" class:up={legendFull} aria-hidden="true">
+					<svg viewBox="0 0 12 12" width="12" height="12"><path d="M3 4.5 6 7.5 9 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>
+				</span>
+			</button>
+			<div class="lwhat" class:lfold={!legendFull}>
 				{legendKey === 'earth'
 					? t.legend.earth.what(sq?.marginDeg ?? hm?.earth_margin_deg ?? app.earthMarginDeg)
 					: t.legend[legendKey === 'sun' ? 'sun' : legendKey === 'slope' ? 'slope' : 'night'].what}
@@ -1018,7 +1035,9 @@
 					<span style="left: {tk.pos}%">{tk.label}</span>
 				{/each}
 			</div>
-			{#if legendKey === 'slope'}
+			{#if !legendFull}
+				<!-- folded: only the title and the colour bar -->
+			{:else if legendKey === 'slope'}
 				<div class="lmeta">{t.slopeSrc}</div>
 				<div class="lmeta">{t.slopeLimit(app.maxSlopeDeg)}</div>
 			{:else}
@@ -1042,7 +1061,7 @@
 					{/if}
 				{/if}
 			{/if}
-			{#if app.mode === 'teacher'}
+			{#if app.mode === 'teacher' && legendFull}
 				<p class="why">{t.why[legendKey]}</p>
 			{/if}
 		</div>
@@ -1638,6 +1657,36 @@
 	.lhead {
 		display: flex;
 		align-items: center;
+		width: 100%;
+		padding: 0;
+		background: none;
+		border: 0;
+		color: inherit;
+		text-align: left;
+		cursor: pointer;
+	}
+	.lchev {
+		margin-left: auto;
+		display: grid;
+		place-items: center;
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+		color: var(--text-2);
+		background: rgba(255, 255, 255, 0.06);
+		transition: transform var(--dur, 200ms) var(--ease-out);
+	}
+	.lchev.up {
+		transform: rotate(180deg);
+	}
+	.lhead:hover .lchev {
+		color: var(--text);
+	}
+	.lwhat.lfold {
+		display: none;
+	}
+	.lfold + .bar {
+		margin-top: 8px;
 	}
 	.ltitle {
 		font: 600 13px/1.2 var(--font-display);
