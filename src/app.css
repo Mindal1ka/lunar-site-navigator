@@ -9,8 +9,8 @@
 	/* surfaces */
 	--bg: #04060a;
 	--bg-2: #0a0e16;
-	--glass: rgba(14, 18, 28, 0.62);
-	--glass-strong: rgba(14, 18, 28, 0.86);
+	--glass: rgba(14, 18, 28, 0.76);
+	--glass-strong: rgba(14, 18, 28, 0.9);
 	--glass-border: rgba(255, 255, 255, 0.08);
 	--glass-border-strong: rgba(255, 255, 255, 0.16);
 	--hairline: rgba(255, 255, 255, 0.06);

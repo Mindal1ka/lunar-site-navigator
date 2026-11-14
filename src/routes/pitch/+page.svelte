@@ -175,7 +175,7 @@
 	<div class="stage" bind:this={host} style:--s={scale}>
 		<!-- 1 · title -->
 		<section class="slide s1" class:on={print || cur === 0} data-i="0" aria-hidden={!print && cur !== 0}>
-			<img class="bgshot kb" src={img('hero')} alt="" />
+			<img class="bgshot" src={img('hero')} alt="" />
 			<div class="veil"></div>
 			<svg class="sky" viewBox="0 0 1920 1080" aria-hidden="true">
 				{#each Array.from({ length: 70 }, (_, k) => k) as k (k)}
@@ -230,7 +230,7 @@
 					</p>
 				</div>
 				<div class="a right" style:--d="2">
-					<div class="frame"><img class="shot kb" src={img('pano_crop')} alt={T.s2.caption} /></div>
+					<div class="frame"><img class="shot" src={img('pano_crop')} alt={T.s2.caption} /></div>
 					<p class="small cap">{T.s2.caption}</p>
 				</div>
 			</div>
@@ -241,7 +241,7 @@
 		<section class="slide s3" class:on={print || cur === 2} data-i="2" aria-hidden={!print && cur !== 2}>
 			<div class="kicker a" style:--d="0">{T.s3.kicker}</div>
 			<h2 class="a" style:--d="1">{T.s3.title}</h2>
-			<div class="frame shotwrap a zoom" style:--d="2"><img class="shot kb" src={img('compare')} alt="" /></div>
+			<div class="frame shotwrap a zoom" style:--d="2"><img class="shot" src={img('compare')} alt="" /></div>
 			<div class="side">
 				{#each T.s3.f as [h, t], k (h)}
 					<div class="card a right" style:--d={3 + k}><b>{h}</b><span>{t}</span></div>
@@ -274,7 +274,7 @@
 						<span>{T.s4.stat2}</span>
 					</div>
 				</div>
-				<div class="frame a zoom" style:--d="10"><img class="shot kb" src={img('heat_crop')} alt="" /></div>
+				<div class="frame a zoom" style:--d="10"><img class="shot" src={img('heat_crop')} alt="" /></div>
 			</div>
 			<div class="num">4 / 7</div>
 		</section>
@@ -329,8 +329,8 @@
 					{/each}
 				</div>
 			</div>
-			<div class="frame p1 a right" style:--d="2"><img class="shot kb" src={img('planner_crop')} alt="" /></div>
-			<div class="frame p2 a right" style:--d="4"><img class="shot kb" src={img('slope')} alt="" /></div>
+			<div class="frame p1 a right" style:--d="2"><img class="shot" src={img('planner_crop')} alt="" /></div>
+			<div class="frame p2 a right" style:--d="4"><img class="shot" src={img('slope')} alt="" /></div>
 			<div class="num">6 / 7</div>
 		</section>
 
@@ -547,7 +547,7 @@
 		to { opacity: 1; transform: none; }
 	}
 	@keyframes zoomIn {
-		from { opacity: 0; transform: scale(0.94) translateY(20px); filter: blur(8px); }
+		from { opacity: 0; transform: translateY(24px); filter: blur(6px); }
 		to { opacity: 1; transform: none; filter: none; }
 	}
 	@keyframes rise {
@@ -559,16 +559,7 @@
 		60% { opacity: 1; transform: scale(1.04) rotate(1deg); }
 		100% { opacity: 1; transform: none; }
 	}
-	/* slow drift on screenshots (Ken Burns) */
-	.on .kb {
-		animation: kb 16s ease-in-out infinite alternate;
-	}
-	@keyframes kb {
-		from { transform: scale(1); }
-		to { transform: scale(1.06) translate(-1%, -0.6%); }
-	}
 	.print .a,
-	.print .kb,
 	.print .star,
 	.print .sun,
 	.print .arrow i {
@@ -579,8 +570,7 @@
 		transform: none;
 	}
 	@media (prefers-reduced-motion: reduce) {
-		.on .a,
-		.on .kb {
+		.on .a {
 			animation-duration: 1ms !important;
 			animation-delay: 0ms !important;
 		}
