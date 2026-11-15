@@ -256,6 +256,7 @@
 							><span data-to="27" data-d="0">27</span></b
 						>{T.s2.callout[4]}
 					</p>
+					<p class="small per a" style:--d="7.5">{T.s2.period}</p>
 					<p class="case a" style:--d="8">{T.s2.case[0]}<b>{T.s2.case[1]}</b>{T.s2.case[2]}</p>
 				</div>
 				<div class="a right" style:--d="2">
@@ -843,8 +844,13 @@
 	.s2 .q {
 		padding: 16px 28px;
 	}
+	.per {
+		margin-top: 6px;
+		font-size: 19px;
+		color: var(--muted);
+	}
 	.case {
-		margin: 22px 0 0;
+		margin: 18px 0 0;
 		padding-left: 18px;
 		border-left: 3px solid var(--sun);
 		font-size: 23px;

@@ -49,7 +49,8 @@ export const PITCH = {
 			],
 			callout: ['Within 500 m of Connecting Ridge, sunlight ranges from ', ' to ', ' and the longest night from ', ' to ', ' days.'],
 			caption: '360° view from Connecting Ridge (C1): the Sun is 1.4° above the real LOLA horizon.',
-			case: ['Real case: ', 'IM-2 Athena', ' (March 2025) came down on its side in a crater about 250 m from its target. Its solar panels could not catch the low Sun, and the battery ran out about 12 hours later.']
+			period: 'Period: Nov 2026 – Nov 2027 · panel height 2 m',
+			case: ['Real case: ', 'IM-2 Athena', ' (March 2025) came down on its side in a crater a few hundred metres from its target. Its solar panels could not catch the low Sun, and the battery ran out about 12 hours later.']
 		},
 		s3: {
 			kicker: 'What we built',
@@ -83,7 +84,7 @@ export const PITCH = {
 			note: 'Always compared at the same height and with the same definition as the reference. At 0 m our values are 8–28 pp below the published ones: on sharp ridges, terrain finer than a pixel decides. So the app uses a 2 m panel height by default.',
 			pp: 'pp',
 			tTitle: 'Gläser et al. (2018), Sun %',
-			tSub: 'Same 2 m height, same definition (mean visible share of the disk)',
+			tSub: 'Same 2 m height, same definition (mean visible share of the disk), same period 2017–2037',
 			th: ['Site', 'Published', 'Ours', 'Diff'],
 			rows: ['Connecting Ridge C1', 'Connecting Ridge C2', 'Shackleton rim S1', 'Shackleton rim S2', 'EPSC 2014 spot 3, 10 m']
 		},
@@ -161,7 +162,8 @@ export const PITCH = {
 			],
 			callout: ['У межах 500 м від Connecting Ridge сонце — від ', ' до ', ', а найдовша ніч — від ', ' до ', ' діб.'],
 			caption: 'Панорама 360° з Connecting Ridge (C1): Сонце на 1,4° над справжнім горизонтом LOLA.',
-			case: ['Реальний випадок: ', 'IM-2 Athena', ' (березень 2025) сів на бік у кратері приблизно за 250 м від цілі. Сонячні панелі не ловили низьке Сонце, і батарея сіла приблизно через 12 годин.']
+			period: 'Період: лист. 2026 – лист. 2027 · висота панелі 2 м',
+			case: ['Реальний випадок: ', 'IM-2 Athena', ' (березень 2025) сів на бік у кратері за кілька сотень метрів від цілі. Сонячні панелі не ловили низьке Сонце, і батарея сіла приблизно через 12 годин.']
 		},
 		s3: {
 			kicker: 'Що ми зробили',
@@ -195,7 +197,7 @@ export const PITCH = {
 			note: 'Порівнюємо завжди на тій самій висоті й за тим самим визначенням, що й еталон. На 0 м розбіжність із публікацією 8–28 в. п.: на гострих гребенях вирішує рельєф, дрібніший за піксель. Тому за замовчуванням висота панелі 2 м.',
 			pp: 'в. п.',
 			tTitle: 'Gläser et al. (2018), Сонце %',
-			tSub: 'Та сама висота 2 м, те саме визначення (середня видима частка диска)',
+			tSub: 'Та сама висота 2 м, те саме визначення (середня видима частка диска), той самий період 2017–2037',
 			th: ['Місце', 'Опубліковано', 'Наше', 'Різниця'],
 			rows: ['Connecting Ridge C1', 'Connecting Ridge C2', 'Вал Шеклтона S1', 'Вал Шеклтона S2', 'EPSC 2014, точка 3, 10 м']
 		},

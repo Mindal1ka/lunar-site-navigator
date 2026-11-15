@@ -42,3 +42,6 @@ CLAUDE.md
 # restart flags read by serve.mjs and pipeline/api.py
 /.restart-site
 /.restart-api
+
+# compressed-file cache for scripts/compress.mjs
+/.cache/

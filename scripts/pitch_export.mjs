@@ -3,56 +3,75 @@
 // to static/pitch/lunar-landing-site-navigator-<lang>[-link].pdf (-link: with a first slide that
 // points to the live version) and per-slide PNGs, then builds the
 // .pptx (one full-slide picture per slide) with scripts/pitch_pptx.py.
+// Each language is rendered once, with the link slide: the plain version is the same pages
+// without the first one. Both languages render in parallel tabs; the .pptx builds run together.
 // usage: node scripts/pitch_export.mjs [http://127.0.0.1:44000] [chrome-or-headless-shell.exe]
-import { spawn, spawnSync } from 'node:child_process';
-import { writeFileSync, mkdtempSync, mkdirSync, copyFileSync, existsSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+import { writeFileSync, mkdtempSync, mkdirSync, copyFileSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const BASE = process.argv[2] ?? 'http://127.0.0.1:44000';
 const EXE = process.argv[3] ?? 'C:/Users/A/AppData/Local/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-win64/chrome-headless-shell.exe';
 const OUT = 'static/pitch';
+const PY = existsSync('.venv/Scripts/python.exe') ? '.venv/Scripts/python.exe' : 'python';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const port = 9200 + Math.floor(Math.random() * 300);
 const proc = spawn(EXE, [`--remote-debugging-port=${port}`, `--user-data-dir=${mkdtempSync(join(tmpdir(), 'pitch-'))}`, 'about:blank'], { stdio: 'ignore' });
 process.on('exit', () => proc.kill('SIGKILL'));
 for (let i = 0; i < 75; i++) { try { await (await fetch(`http://127.0.0.1:${port}/json/version`)).json(); break; } catch { await sleep(200); } }
-const t = await (await fetch(`http://127.0.0.1:${port}/json/new?about:blank`, { method: 'PUT' })).json();
-const ws = new WebSocket(t.webSocketDebuggerUrl);
-await new Promise((r) => (ws.onopen = r));
-let id = 0;
-const pend = new Map();
-ws.onmessage = (m) => { const d = JSON.parse(m.data); if (d.id && pend.has(d.id)) { pend.get(d.id)(d); pend.delete(d.id); } };
-const send = (method, params = {}) => new Promise((r) => { const i = ++id; pend.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); }).then((d) => { if (d.error) throw new Error(method + ': ' + d.error.message); return d.result; });
-await send('Page.enable');
-await send('Runtime.enable');
-await send('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
 
-for (const lang of ['en', 'uk']) for (const link of [false, true]) {
-	const sfx = `${lang}${link ? '-link' : ''}`;
-	await send('Page.navigate', { url: `${BASE}/pitch?print=1&lang=${lang}${link ? '&note=1' : ''}` });
-	await sleep(1500);
+async function tab() {
+	const t = await (await fetch(`http://127.0.0.1:${port}/json/new?about:blank`, { method: 'PUT' })).json();
+	const ws = new WebSocket(t.webSocketDebuggerUrl);
+	await new Promise((r) => (ws.onopen = r));
+	let id = 0;
+	const pend = new Map();
+	ws.onmessage = (m) => { const d = JSON.parse(m.data); if (d.id && pend.has(d.id)) { pend.get(d.id)(d); pend.delete(d.id); } };
+	return (method, params = {}) => new Promise((r) => { const i = ++id; pend.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); }).then((d) => { if (d.error) throw new Error(method + ': ' + d.error.message); return d.result; });
+}
+
+const pptx = (dir, files, out) => new Promise((res, rej) => {
+	const p = spawn(PY, ['scripts/pitch_pptx.py', dir, files.join(','), out], { stdio: 'inherit' });
+	p.on('exit', (c) => (c === 0 ? res() : rej(new Error('pptx failed: ' + out))));
+});
+
+async function render(lang) {
+	const send = await tab();
+	await send('Page.enable');
+	await send('Runtime.enable');
+	await send('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
+	await send('Page.navigate', { url: `${BASE}/pitch?print=1&lang=${lang}&note=1` });
+	await sleep(800);
 	await send('Runtime.evaluate', {
-		expression: `(async()=>{await document.fonts.ready;await Promise.all([...document.images].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));return 1})()`,
+		expression: `(async()=>{while(document.readyState!=='complete')await new Promise(r=>setTimeout(r,50));await document.fonts.ready;await Promise.all([...document.images].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));return 1})()`,
 		awaitPromise: true
 	});
-	await sleep(800);
+	await sleep(400);
 	const n = (await send('Runtime.evaluate', { expression: 'document.querySelectorAll(".slide").length', returnByValue: true })).result.value;
-	const pdf = await send('Page.printToPDF', { printBackground: true, paperWidth: 20, paperHeight: 11.25, marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0, preferCSSPageSize: false, pageRanges: `1-${n}` });
-	writeFileSync(join(OUT, `lunar-landing-site-navigator-${sfx}.pdf`), Buffer.from(pdf.data, 'base64'));
-	const dir = join(tmpdir(), `pitch-png-${sfx}`);
+	const pdfOpts = { printBackground: true, paperWidth: 20, paperHeight: 11.25, marginTop: 0, marginBottom: 0, marginLeft: 0, marginRight: 0, preferCSSPageSize: false };
+	// page 1 is the link slide
+	const [withLink, plain] = [await send('Page.printToPDF', { ...pdfOpts, pageRanges: `1-${n}` }), await send('Page.printToPDF', { ...pdfOpts, pageRanges: `2-${n}` })];
+	writeFileSync(join(OUT, `lunar-landing-site-navigator-${lang}-link.pdf`), Buffer.from(withLink.data, 'base64'));
+	writeFileSync(join(OUT, `lunar-landing-site-navigator-${lang}.pdf`), Buffer.from(plain.data, 'base64'));
+	const dir = join(tmpdir(), `pitch-png-${lang}`);
+	rmSync(dir, { recursive: true, force: true });
 	mkdirSync(dir, { recursive: true });
 	await send('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
 	for (let i = 0; i < n; i++) {
 		const { data } = await send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: i * 1080, width: 1920, height: 1080, scale: 1 }, captureBeyondViewport: true });
-		writeFileSync(join(dir, `s${i + 1}.png`), Buffer.from(data, 'base64'));
+		writeFileSync(join(dir, i === 0 ? 'link.png' : `s${i}.png`), Buffer.from(data, 'base64'));
 	}
-	const py = existsSync('.venv/Scripts/python.exe') ? '.venv/Scripts/python.exe' : 'python';
-	const r = spawnSync(py, ['scripts/pitch_pptx.py', dir, String(n), join(OUT, `lunar-landing-site-navigator-${sfx}.pptx`)], { stdio: 'inherit' });
-	if (r.status !== 0) throw new Error('pptx failed');
-	console.log(`${sfx}: ${n} slides -> pdf, pptx`);
+	const slides = Array.from({ length: n - 1 }, (_, i) => `s${i + 1}.png`);
+	await Promise.all([
+		pptx(dir, ['link.png', ...slides], join(OUT, `lunar-landing-site-navigator-${lang}-link.pptx`)),
+		pptx(dir, slides, join(OUT, `lunar-landing-site-navigator-${lang}.pptx`))
+	]);
+	console.log(`${lang}: ${n - 1} slides (+ link slide) -> pdf, pptx`);
 }
+
+await Promise.all(['en', 'uk'].map(render));
 // keep the running build in sync without a rebuild
 if (existsSync('build/pitch')) for (const lang of ['en', 'uk', 'en-link', 'uk-link']) for (const ext of ['pdf', 'pptx']) { const f = `lunar-landing-site-navigator-${lang}.${ext}`; copyFileSync(join(OUT, f), join('build/pitch', f)); }
 process.exit(0);
