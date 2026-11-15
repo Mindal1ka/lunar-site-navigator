@@ -9,7 +9,6 @@
 	import SiteCard from '#lib/components/SiteCard.svelte';
 	import TopBar from '#lib/components/TopBar.svelte';
 	import PlannerPanel from '#lib/components/PlannerPanel.svelte';
-	import Welcome from '#lib/components/Welcome.svelte';
 	import { initUrlState } from '#lib/url.svelte.ts';
 	import { perf } from '#lib/perf.svelte.ts';
 
@@ -54,8 +53,6 @@
 		content="Compare lunar south pole landing sites by sunlight and Earth visibility over the real horizon, computed from NASA LOLA topography and JPL ephemerides."
 	/>
 </svelte:head>
-
-<Welcome />
 
 <div class="app" class:mode-planner={app.mode === 'planner'} class:view-panorama={app.view === 'panorama'}>
 	<div class="stage">
