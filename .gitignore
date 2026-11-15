@@ -38,3 +38,7 @@ CLAUDE.md
 # Helper for the second GPU machine (not part of the app)
 /tools/
 /pitch/
+
+# restart flags read by serve.mjs and pipeline/api.py
+/.restart-site
+/.restart-api

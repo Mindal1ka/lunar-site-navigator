@@ -5,7 +5,7 @@
 // - proxies /api/* to the Python point API (pipeline/api.py)
 // Usage: node serve.mjs   (PORT, HOST, API_PORT env vars override the defaults)
 import { createServer, request } from 'node:http';
-import { createReadStream } from 'node:fs';
+import { createReadStream, existsSync, rmSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
 
@@ -131,3 +131,13 @@ createServer(async (req, res) => {
 		res.writeHead(500).end();
 	}
 }).listen(PORT, HOST, () => console.log(`Serving ${ROOT} on http://${HOST}:${PORT}`));
+
+// Restart on request without admin rights: scripts/restart.bat creates .restart-site,
+// we remove it and exit; the loop in start-site.bat starts the server again.
+const FLAG = resolve('.restart-site');
+setInterval(() => {
+	if (!existsSync(FLAG)) return;
+	rmSync(FLAG, { force: true });
+	console.log('restart requested');
+	process.exit(0);
+}, 2000).unref();

@@ -286,5 +286,21 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 44001
     point(-89.4398, 222.83)  # warm up the JIT before accepting requests
+    # Restart on request without admin rights: scripts/restart.bat creates .restart-api
+    # in the repo root, we remove it and exit; the loop in start-api.bat starts us again.
+    flag = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".restart-api")
+
+    def watch_restart_flag():
+        while True:
+            time.sleep(2)
+            if os.path.exists(flag):
+                try:
+                    os.remove(flag)
+                except OSError:
+                    pass
+                print("restart requested", flush=True)
+                os._exit(0)
+
+    threading.Thread(target=watch_restart_flag, daemon=True).start()
     print(f"api ready on 127.0.0.1:{port}", flush=True)
     ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
