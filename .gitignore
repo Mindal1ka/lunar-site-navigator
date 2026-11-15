@@ -45,3 +45,6 @@ CLAUDE.md
 
 # compressed-file cache for scripts/compress.mjs
 /.cache/
+
+# rendered demo video (large; built by scripts/video/make.sh)
+/video/

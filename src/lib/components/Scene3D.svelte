@@ -323,7 +323,13 @@
 			return;
 		}
 		engine = eng;
-		if (location.search.includes('debug')) (window as unknown as { __eng: unknown }).__eng = eng; // inspection only
+		if (location.search.includes('debug')) {
+			// inspection and the frame-by-frame video capture (scripts/video/), never used by the app itself
+			Object.assign(window as unknown as Record<string, unknown>, {
+				__eng: eng,
+				__vid: { app, eng, siteToScene, surfaceAt, latLonToXY, dirToScene, ephemAt, rampCss, introDone: () => introDone }
+			});
+		}
 		eng.setInsets(computeInsets());
 
 		const ro = new ResizeObserver(() => {
