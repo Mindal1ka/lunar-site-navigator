@@ -51,3 +51,6 @@ CLAUDE.md
 
 # Local speech notes
 /pitch-speech.md
+
+# Demo videos (large; rendered by scripts/video/make.sh, copied here for /video)
+/static/video/

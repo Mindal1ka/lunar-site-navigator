@@ -28,6 +28,7 @@ const TYPES = {
 	'.ico': 'image/x-icon',
 	'.txt': 'text/plain; charset=utf-8',
 	'.csv': 'text/csv; charset=utf-8',
+	'.mp4': 'video/mp4',
 	'.bin': 'application/octet-stream',
 	'.pdf': 'application/pdf',
 	'.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
@@ -123,6 +124,22 @@ createServer(async (req, res) => {
 			Vary: 'Accept-Encoding'
 		};
 		if (encoding) headers['Content-Encoding'] = encoding;
+		else headers['Accept-Ranges'] = 'bytes';
+		// byte ranges for uncompressed files (video seeking; Safari needs them to play at all)
+		const range = !encoding && /^bytes=(\d*)-(\d*)$/.exec(String(req.headers.range ?? ''));
+		if (range && (range[1] || range[2])) {
+			const size = body.size;
+			let start = range[1] ? +range[1] : Math.max(0, size - +range[2]);
+			let end = range[1] && range[2] ? Math.min(+range[2], size - 1) : size - 1;
+			if (start >= size || start > end) {
+				res.writeHead(416, { 'Content-Range': `bytes */${size}` }).end();
+				return;
+			}
+			res.writeHead(206, { ...headers, 'Content-Length': end - start + 1, 'Content-Range': `bytes ${start}-${end}/${size}` });
+			if (req.method === 'HEAD') return res.end();
+			createReadStream(body.path, { start, end }).pipe(res);
+			return;
+		}
 		res.writeHead(200, headers);
 		if (req.method === 'HEAD') return res.end();
 		createReadStream(body.path).pipe(res);
