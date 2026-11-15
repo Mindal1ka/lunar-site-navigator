@@ -55,7 +55,10 @@ await send('Page.addScriptToEvaluateOnNewDocument', {
 		window.__now = () => T;
 	})();`
 });
-await send('Page.navigate', { url: `${BASE}/?debug&q=high&lang=en&a=connecting-ridge-c1` });
+// VLANG=uk renders the Ukrainian captions (and the app itself in Ukrainian)
+const VLANG = process.env.VLANG === 'uk' ? 'uk' : 'en';
+await send('Page.addScriptToEvaluateOnNewDocument', { source: `window.__vidLang = '${VLANG}';` });
+await send('Page.navigate', { url: `${BASE}/?debug&q=high&lang=${VLANG}&a=connecting-ridge-c1` });
 
 // warm-up in (almost) real time: load data, compile shaders, play the app's own intro, load heat maps
 const until = Date.now() + 40000;

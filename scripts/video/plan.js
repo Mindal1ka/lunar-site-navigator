@@ -10,6 +10,42 @@
 	const R = 1737.4;
 	const D2R = Math.PI / 180;
 	const HOUR0 = Date.UTC(2026, 10, 1); // ephemeris index 0
+	// captions and labels: EN (default) or UK, chosen by capture.mjs via window.__vidLang
+	const LANG = window.__vidLang === 'uk' ? 'uk' : 'en';
+	const TX = {
+		en: {
+			locale: 'en-GB', dec: '.', days: ' days', night: '9.1 days',
+			c1: 'Sunlight at the pole skims the horizon',
+			c2: 'A few hundred metres change everything',
+			c3: (v) => `Connecting Ridge C1: ${v} in sunlight`,
+			c4: (e, n) => `Earth in view ${e} · Longest night ${n}`,
+			c5: 'Validated vs JPL Horizons and NASA LOLA',
+			c5sub: 'ephemeris 0.1″ max difference · illumination map 1.0 pp mean error',
+			period: 'Nov 2026 – Nov 2027 · Panel/antenna height: 2 m',
+			chipTail: '2 m · Nov 2026 – Nov 2027',
+			leg: [['Sunlight', 'share of time in sunlight'], ['Earth in view', 'share of time with Earth above the horizon'], ['Longest night', 'longest stretch with no Sun, days']],
+			val: ['in sunlight', 'Earth in view', 'longest night'],
+			lapse: 'TIME-LAPSE · UTC', c1name: 'Connecting Ridge (C1)',
+			tagline: 'Where and when to land at the lunar south pole.',
+			ai: 'AI-assisted · real app render, NASA LOLA + JPL/NAIF data'
+		},
+		uk: {
+			locale: 'uk-UA', dec: ',', days: ' доби', night: '9,1 доби',
+			c1: 'На полюсі Сонце ковзає над горизонтом',
+			c2: 'Кілька сотень метрів змінюють усе',
+			c3: (v) => `Сполучний хребет C1: ${v} часу під Сонцем`,
+			c4: (e, n) => `Земля видна ${e} · Найдовша ніч ${n}`,
+			c5: 'Перевірено за JPL Horizons і NASA LOLA',
+			c5sub: 'ефемериди: макс. різниця 0,1″ · карта освітленості: сер. похибка 1,0 в. п.',
+			period: 'лист. 2026 – лист. 2027 · Висота панелі/антени: 2 м',
+			chipTail: '2 м · лист. 2026 – лист. 2027',
+			leg: [['Сонячне світло', 'частка часу під Сонцем'], ['Земля видна', 'частка часу, коли Земля над горизонтом'], ['Найдовша ніч', 'найдовший проміжок без Сонця, доби']],
+			val: ['часу під Сонцем', 'Земля видна', 'найдовша ніч'],
+			lapse: 'ТАЙМЛАПС · UTC', c1name: 'Сполучний хребет (C1)',
+			tagline: 'Де й коли сідати на південному полюсі Місяця.',
+			ai: 'Створено з допомогою ШІ · справжній рендер застосунку, дані NASA LOLA + JPL/NAIF'
+		}
+	}[LANG];
 
 	// ------------------------------------------------------------ geometry helpers
 	const mapXY = (lat, lon) => V.latLonToXY(lat, lon).map((v) => v / 1000); // km
@@ -90,10 +126,12 @@
 		{ t: 9, tg: c1xy, d: 22, el: deg(17), az: AF - deg(190), fov: 45 },
 		{ t: 14, tg: c1xy, d: 10.5, el: deg(11), az: AF - deg(160), fov: 45 },
 		{ t: 16.5, tg: c1xy, d: 20, el: deg(40), az: AF - deg(132), fov: 45 },
-		{ t: 20.5, tg: c1xy, d: 23, el: deg(44), az: AF - deg(92), fov: 45 },
-		{ t: 23.5, tg: c1xy, d: 14, el: deg(27), az: AF - deg(55), fov: 42 },
-		{ t: 27.2, tg: finTarget, ta: finTgAlt, d: finDist, el: finElev, az: AF, fov: 14 },
-		{ t: 30, tg: finTarget, ta: finTgAlt, d: finDist - 0.25, el: finElev, az: AF, fov: 11.5 }
+		{ t: 20.3, tg: c1xy, d: 23, el: deg(44), az: AF - deg(95), fov: 45 },
+		{ t: 22.8, tg: c1xy, d: 17, el: deg(31), az: AF - deg(62), fov: 44 },
+		// long, gentle descent: the target slides out toward Earth while the camera sinks and the lens narrows
+		{ t: 25.6, tg: toward(11), ta: finTgAlt * 0.35, d: 17.5, el: deg(7), az: AF - deg(16), fov: 27 },
+		{ t: 28.1, tg: finTarget, ta: finTgAlt, d: finDist, el: finElev, az: AF, fov: 14 },
+		{ t: 30, tg: finTarget, ta: finTgAlt, d: finDist - 0.2, el: finElev, az: AF, fov: 12 }
 	];
 	// scalar channels for the spline
 	// target altitude is keyed (terrain sampled at the keys only), so it cannot jitter between them
@@ -190,9 +228,10 @@
 		#vid .mk .val { margin-top: 8px; font: 600 58px var(--font-display), sans-serif; color: var(--c); text-shadow: 0 2px 20px rgba(0,0,0,.9); font-variant-numeric: tabular-nums; }
 		#vid .mk .stem { width: 2px; height: 46px; margin: 6px auto 0; background: linear-gradient(rgba(255,255,255,.9), rgba(255,255,255,0)); }
 		#vid .mk .dot { width: 14px; height: 14px; border-radius: 50%; margin: -2px auto 0; background: #fff; box-shadow: 0 0 0 5px rgba(255,255,255,.25); transform: translateY(50%); }
+		#vid .endbg { position: absolute; inset: 0; opacity: 0; background: linear-gradient(to top, rgba(2,3,6,.92) 0%, rgba(2,3,6,.8) 30%, rgba(2,3,6,.4) 52%, rgba(2,3,6,0) 70%); }
 		#vid .end { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 150px; text-align: center; }
-		#vid .end h1 { margin: 0; font: 600 92px var(--font-display), sans-serif; letter-spacing: -0.03em; text-shadow: 0 4px 40px rgba(0,0,0,.8); }
-		#vid .end p { margin: 14px 0 0; font: 400 34px var(--font-display), sans-serif; color: rgba(255,255,255,.85); }
+		#vid .end h1 { margin: 0; font: 600 92px var(--font-display), sans-serif; letter-spacing: -0.03em; text-shadow: 0 4px 40px rgba(0,0,0,.9), 0 0 6px rgba(0,0,0,.7); }
+		#vid .end p { margin: 14px 0 0; font: 400 34px var(--font-display), sans-serif; color: rgba(255,255,255,.94); text-shadow: 0 2px 18px rgba(0,0,0,.9); }
 		#vid .end .url { margin-top: 34px; font: 500 34px var(--font-mono), monospace; color: #ffb547; }
 		#vid .end .team { margin-top: 16px; font: 500 22px var(--font-display), sans-serif; color: rgba(255,255,255,.7); letter-spacing: .02em; }
 		#vid .ai { position: absolute; right: 30px; bottom: 22px; font: 500 15px var(--font-mono), monospace; letter-spacing: .06em; color: rgba(255,255,255,.6); text-shadow: 0 1px 6px rgba(0,0,0,.9); }
@@ -204,25 +243,25 @@
 	root.id = 'vid';
 	root.innerHTML = `
 		<div class="vign"></div>
-		<div class="date"><i>TIME-LAPSE · UTC</i><span></span></div>
+		<div class="date"><i>${TX.lapse}</i><span></span></div>
 		<div class="chip"><b></b><span></span><div class="bar"></div></div>
-		<div class="mk"><div class="pill"><i>A</i>Connecting Ridge (C1)</div><div class="val"></div><div class="stem"></div><div class="dot"></div></div>
+		<div class="mk"><div class="pill"><i>A</i>${TX.c1name}</div><div class="val"></div><div class="stem"></div><div class="dot"></div></div>
 		<div class="cap"></div>
-		<div class="end"><h1>Lunar Landing Site Navigator</h1><p>Where and when to land at the lunar south pole.</p><div class="url">space.mindal1ka.com</div><div class="team">✦ IT STEP Poltava × Mindal1ka.com ✦</div></div>
-		<div class="ai">AI-assisted · real app render, NASA LOLA + JPL/NAIF data</div>
+		<div class="endbg"></div>
+		<div class="end"><h1>Lunar Landing Site Navigator</h1><p>${TX.tagline}</p><div class="url">space.mindal1ka.com</div><div class="team">✦ IT STEP Poltava × Mindal1ka.com ✦</div></div>
+		<div class="ai">${TX.ai}</div>
 		<div class="black"></div>`;
 	document.body.appendChild(root);
 	const $ = (s) => root.querySelector(s);
-	const capEl = $('.cap'), dateEl = $('.date'), dateTxt = $('.date span'), chipEl = $('.chip'), mkEl = $('.mk'), valEl = $('.mk .val'), endEl = $('.end'), blackEl = $('.black');
+	const capEl = $('.cap'), dateEl = $('.date'), dateTxt = $('.date span'), chipEl = $('.chip'), mkEl = $('.mk'), valEl = $('.mk .val'), endEl = $('.end'), endBg = $('.endbg'), blackEl = $('.black');
 
 	const SUN = '#ffb547', EARTH = '#5cc8ff', NIGHT = '#a58bff';
-	const PERIOD = 'Nov 2026 – Nov 2027 · Panel/antenna height: 2 m';
 	const caps = [
-		{ t0: 0.6, t1: 3.8, html: 'Sunlight at the pole skims the horizon' },
-		{ t0: 4.9, t1: 8.7, html: 'A few hundred metres change everything' },
-		{ t0: 15.1, t1: 18.9, html: `Connecting Ridge C1: <b style="--c:${SUN}">87%</b> in sunlight`, sub: PERIOD },
-		{ t0: 19.3, t1: 23.4, html: `Earth in view <b style="--c:${EARTH}">49%</b> · Longest night <b style="--c:${NIGHT}">9.1 days</b>`, sub: PERIOD },
-		{ t0: 24.3, t1: 27.1, html: 'Validated vs JPL Horizons and NASA LOLA', sub: 'ephemeris 0.1″ max difference · illumination map 1.0 pp mean error' }
+		{ t0: 0.6, t1: 3.8, html: TX.c1 },
+		{ t0: 4.9, t1: 8.7, html: TX.c2 },
+		{ t0: 15.1, t1: 18.9, html: TX.c3(`<b style="--c:${SUN}">87%</b>`), sub: TX.period },
+		{ t0: 19.3, t1: 23.0, html: TX.c4(`<b style="--c:${EARTH}">49%</b>`, `<b style="--c:${NIGHT}">${TX.night}</b>`), sub: TX.period },
+		{ t0: 24.0, t1: 27.5, html: TX.c5, sub: TX.c5sub }
 	];
 	function caption(t) {
 		const c = caps.find((c) => t >= c.t0 && t < c.t1);
@@ -236,29 +275,29 @@
 	}
 	const fmtDate = (idx) => {
 		const d = new Date(HOUR0 + idx * 3600000);
-		const m = d.toLocaleString('en-GB', { month: 'short', timeZone: 'UTC' });
+		const m = d.toLocaleString(TX.locale, { month: 'short', timeZone: 'UTC' });
 		return `${String(d.getUTCDate()).padStart(2, '0')} ${m} ${d.getUTCFullYear()} · ${String(d.getUTCHours()).padStart(2, '0')}:00`;
 	};
 
 	// heat layers drawn by the terrain shader: (from, to, mix); 0 off, 1 sun, 2 earth, 3 night
 	const layers = eng.U.uHeatLayers.value;
 	function heat(t) {
-		const seq = [[14.0, 0, 1], [19.0, 1, 2], [21.0, 2, 3], [23.6, 3, 0]];
+		const seq = [[14.0, 0, 1], [19.0, 1, 2], [21.0, 2, 3], [23.0, 3, 0]];
 		let from = 0, to = 0, mix = 0;
-		for (const [ts, f, tt] of seq) if (t >= ts) { from = f; to = tt; mix = smooth((t - ts) / (ts === 14 ? 1.6 : 1.1)); }
+		for (const [ts, f, tt] of seq) if (t >= ts) { from = f; to = tt; mix = smooth((t - ts) / (ts === 14 ? 1.6 : ts === 23 ? 2.0 : 1.1)); }
 		layers.set(from, to, mix);
 		return mix < 0.5 ? from : to;
 	}
 	const LEG = {
-		1: { c: SUN, name: 'Sunlight', txt: 'share of time in sunlight', grad: V.rampCss('sun') },
-		2: { c: EARTH, name: 'Earth in view', txt: 'share of time with Earth above the horizon', grad: V.rampCss('earth') },
-		3: { c: NIGHT, name: 'Longest night', txt: 'longest stretch with no Sun, days', grad: V.rampCss('night') }
+		1: { c: SUN, name: TX.leg[0][0], txt: TX.leg[0][1], grad: V.rampCss('sun') },
+		2: { c: EARTH, name: TX.leg[1][0], txt: TX.leg[1][1], grad: V.rampCss('earth') },
+		3: { c: NIGHT, name: TX.leg[2][0], txt: TX.leg[2][1], grad: V.rampCss('night') }
 	};
-	const VALS = { 1: ['87%', 'in sunlight', 87, '%'], 2: ['49%', 'Earth in view', 49, '%'], 3: ['9.1 days', 'longest night', 9.1, ' days'] };
+	const VALS = { 1: [TX.val[0], 87, '%'], 2: [TX.val[1], 49, '%'], 3: [TX.val[2], 9.1, TX.days] };
 
 	const c1Scene = () => S(c1xy[0], c1xy[1], groundM(...c1xy));
 	function marker(t, layer) {
-		const a = Math.min(ramp(t, 7.4, 8.4), 1 - ramp(t, 23.8, 24.6));
+		const a = Math.min(ramp(t, 7.4, 8.4), 1 - ramp(t, 22.9, 23.9));
 		if (a <= 0.001) { mkEl.style.opacity = '0'; return; }
 		const p = new eng.camera.position.constructor(...c1Scene()).project(eng.camera);
 		const x = (p.x * 0.5 + 0.5) * innerWidth, y = (-p.y * 0.5 + 0.5) * innerHeight;
@@ -266,11 +305,11 @@
 		mkEl.style.top = `${y}px`;
 		mkEl.style.opacity = String(a);
 		if (layer && t >= 14.6) {
-			const [, label, v, unit] = VALS[layer];
+			const [label, v, unit] = VALS[layer];
 			const L = LEG[layer];
 			// count up on the first reveal, then switch values with the layer
 			const k = layer === 1 ? smoother((t - 15.0) / 2.0) : 1;
-			const shown = layer === 3 ? (v * k).toFixed(1) : Math.round(v * k);
+			const shown = layer === 3 ? (v * k).toFixed(1).replace('.', TX.dec) : Math.round(v * k);
 			valEl.innerHTML = `${shown}${unit}<span style="font-size:20px;color:rgba(255,255,255,.75);display:block;font-weight:500;margin-top:2px">${label}</span>`;
 			valEl.style.setProperty('--c', L.c);
 			valEl.style.opacity = String(ramp(t, 14.6, 15.0));
@@ -307,21 +346,22 @@
 			dateEl.style.opacity = String(da);
 			dateTxt.textContent = fmtDate(app.t);
 			// legend chip while a layer is on
-			const ca = Math.min(ramp(t, 14.4, 15.0), 1 - ramp(t, 23.6, 24.2));
+			const ca = Math.min(ramp(t, 14.4, 15.0), 1 - ramp(t, 23.0, 23.8));
 			chipEl.style.opacity = String(ca);
 			if (ca > 0 && layer) {
 				const L = LEG[layer];
 				chipEl.style.setProperty('--c', L.c);
 				chipEl.querySelector('b').textContent = L.name;
-				chipEl.querySelector('span').textContent = `${L.txt} · 2 m · Nov 2026 – Nov 2027`;
+				chipEl.querySelector('span').textContent = `${L.txt} · ${TX.chipTail}`;
 				chipEl.querySelector('.bar').style.background = L.grad;
 			}
 			marker(t, layer);
 			// end card, darken under it, fades
-			const ea = ramp(t, 27.4, 28.1);
+			const ea = ramp(t, 27.9, 28.7);
+			endBg.style.opacity = String(ramp(t, 27.4, 28.6));
 			endEl.style.opacity = String(ea);
 			endEl.style.transform = `translateY(${(1 - ea) * 18}px)`;
-			eng.U.uExposure.value = 1.15 * (1 - 0.2 * ea);
+			eng.U.uExposure.value = 1.15 * (1 - 0.3 * ea);
 			blackEl.style.opacity = String(Math.max(1 - smooth(t / 0.5), ramp(t, 29.55, 30)));
 			await new Promise((r) => setTimeout(r, 0)); // let Svelte effects run (Sun, Earth)
 			eng.renderer.getContext().finish();
