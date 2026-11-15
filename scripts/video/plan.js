@@ -41,16 +41,18 @@
 	const mapAz = (d) => Math.atan2(-d[2], d[0]);
 
 	// ------------------------------------------------------------ pick the moment T* (lands at 14 s)
-	// Sun up at C1 and Earth a few degrees above its horizon, Sun and Earth well apart in azimuth
+	// Sun up at C1 and Earth a few degrees above its horizon, Sun nearly behind the camera when it
+	// looks at Earth: a well-lit, almost full Earth and a lit foreground
 	let TSTAR = 14 * 24;
 	{
 		let best = -1e9;
-		for (let i = 14 * 24; i < 75 * 24; i++) {
+		// starts after the ~26-day time-lapse fits inside the ephemeris (index 0 = 1 Nov 2026)
+		for (let i = 28 * 24; i < 90 * 24; i++) {
 			const s = skyAt(i);
-			if (s.sunEl < 1.0 || s.earthEl < 2.5 || s.earthEl > 6) continue;
+			if (s.sunEl < 0.8 || s.earthEl < 2.5 || s.earthEl > 6.5) continue;
 			let dAz = Math.abs(mapAz(s.sunScene) - mapAz(s.earthScene));
 			if (dAz > Math.PI) dAz = 2 * Math.PI - dAz;
-			const score = s.sunEl * 2 + Math.min(dAz, 1.6) * 3 - Math.abs(s.earthEl - 4);
+			const score = dAz * 4 + Math.min(s.sunEl, 2) * 1.5 - Math.abs(s.earthEl - 4);
 			if (score > best) { best = score; TSTAR = i; }
 		}
 	}
@@ -71,10 +73,13 @@
 	const toward = (k) => [c1xy[0] + Math.cos(earthAz) * k, c1xy[1] + Math.sin(earthAz) * k];
 	const finTarget = toward(30); // a ground point 30 km beyond C1 toward Earth
 	const finCam = toward(-2.6); // 2.6 km behind the crest
-	const finCamAlt = Math.max(groundM(...finCam), groundM(...c1xy)) + 420;
+	// high enough over everything within 700 m (and the crest) that the clearance lift never kicks in here
+	let ringMax = groundM(...c1xy);
+	for (let a = 0; a < 16; a++) for (const r of [0, 0.35, 0.7]) ringMax = Math.max(ringMax, groundM(finCam[0] + r * Math.cos(a * 0.3927), finCam[1] + r * Math.sin(a * 0.3927)));
+	const finCamAlt = ringMax + 380;
 	const finDist = Math.hypot(finTarget[0] - finCam[0], finTarget[1] - finCam[1]);
 	// look slightly below Earth so it sits in the upper part of the frame, above the end card
-	const pitch = (sky.earthEl - 2.4) * D2R;
+	const pitch = (sky.earthEl - 1.9) * D2R;
 	const finElev = -pitch; // camera below its (airborne) target -> looks slightly up
 	const finTgAlt = finCamAlt + finDist * 1000 * Math.tan(pitch) - groundM(...finTarget); // m above ground
 	const keys = [
@@ -87,17 +92,25 @@
 		{ t: 16.5, tg: c1xy, d: 20, el: deg(40), az: AF - deg(132), fov: 45 },
 		{ t: 20.5, tg: c1xy, d: 23, el: deg(44), az: AF - deg(92), fov: 45 },
 		{ t: 23.5, tg: c1xy, d: 14, el: deg(27), az: AF - deg(55), fov: 42 },
-		{ t: 27.2, tg: finTarget, ta: finTgAlt, d: finDist, el: finElev, az: AF, fov: 17 },
-		{ t: 30, tg: finTarget, ta: finTgAlt, d: finDist - 0.25, el: finElev, az: AF, fov: 15.5 }
+		{ t: 27.2, tg: finTarget, ta: finTgAlt, d: finDist, el: finElev, az: AF, fov: 14 },
+		{ t: 30, tg: finTarget, ta: finTgAlt, d: finDist - 0.25, el: finElev, az: AF, fov: 11.5 }
 	];
 	// scalar channels for the spline
-	const ch = (k) => [k.tg[0], k.tg[1], Math.log(k.d), k.el, k.az, k.fov, k.ta ?? 0];
+	// target altitude is keyed (terrain sampled at the keys only), so it cannot jitter between them
+	const ch = (k) => [k.tg[0], k.tg[1], Math.log(k.d), k.el, k.az, k.fov, groundM(...k.tg) + (k.ta ?? 0)];
 	const P = keys.map(ch);
 	const T = keys.map((k) => k.t);
+	// monotone cubic tangents (Fritsch-Carlson): smooth, but never overshoots a key -- an overshoot
+	// is what made the camera dip into the ground and wobble before the final hold
 	const tang = P.map((p, i) => p.map((_, j) => {
 		if (i === P.length - 1) return 0; // come to rest
-		if (i === 0) return ((P[1][j] - P[0][j]) / (T[1] - T[0])) * 0.5; // already moving on frame 0
-		return (P[i + 1][j] - P[i - 1][j]) / (T[i + 1] - T[i - 1]);
+		const dR = (P[i + 1][j] - P[i][j]) / (T[i + 1] - T[i]);
+		if (i === 0) return dR * 0.5; // already moving on frame 0
+		const dL = (P[i][j] - P[i - 1][j]) / (T[i] - T[i - 1]);
+		if (dL * dR <= 0) return 0;
+		const hL = T[i] - T[i - 1], hR = T[i + 1] - T[i];
+		const w1 = 2 * hR + hL, w2 = hR + 2 * hL;
+		return (w1 + w2) / (w1 / dL + w2 / dR);
 	}));
 	function spline(t) {
 		let i = 0;
@@ -108,14 +121,40 @@
 		const h00 = 2 * u3 - 3 * u2 + 1, h10 = u3 - 2 * u2 + u, h01 = -2 * u3 + 3 * u2, h11 = u3 - u2;
 		return P[i].map((_, j) => h00 * P[i][j] + h10 * h * tang[i][j] + h01 * P[i + 1][j] + h11 * h * tang[i + 1][j]);
 	}
-	function camAt(t) {
-		const [tx, ty, ld, el, az, fov, ta] = spline(t);
+	function rawCam(t) {
+		const [tx, ty, ld, el, az, fov, g] = spline(t);
 		const d = Math.exp(ld);
-		const g = groundM(tx, ty) + ta;
 		const cx = tx + d * Math.cos(el) * Math.cos(az);
 		const cy = ty + d * Math.cos(el) * Math.sin(az);
-		const alt = g + d * Math.sin(el) * 1000;
-		return { pos: S(cx, cy, alt), look: S(tx, ty, g), fov };
+		return { tx, ty, g, cx, cy, alt: g + d * Math.sin(el) * 1000, fov };
+	}
+	// terrain clearance, solved once for the whole path: wherever the camera would come closer than
+	// CLEAR m to the ground (anywhere within 400 m of it), lift it -- then spread the lift with a
+	// running max and a wide Gaussian so it rises and settles gently instead of bumping
+	const FPS = 60, NF = 30 * FPS + 1, CLEAR = 220;
+	const need = new Float64Array(NF);
+	for (let f = 0; f < NF; f++) {
+		const c = rawCam(f / FPS);
+		let gmax = -1e9;
+		for (const [dx, dy] of [[0, 0], [0.4, 0], [-0.4, 0], [0, 0.4], [0, -0.4], [0.28, 0.28], [-0.28, 0.28], [0.28, -0.28], [-0.28, -0.28]]) gmax = Math.max(gmax, groundM(c.cx + dx, c.cy + dy));
+		need[f] = Math.max(0, gmax + CLEAR - c.alt);
+	}
+	const W = Math.round(0.6 * FPS);
+	const runMax = new Float64Array(NF);
+	for (let f = 0; f < NF; f++) { let m = 0; for (let k = Math.max(0, f - W); k <= Math.min(NF - 1, f + W); k++) m = Math.max(m, need[k]); runMax[f] = m; }
+	const lift = new Float64Array(NF);
+	const sig = 0.35 * FPS;
+	for (let f = 0; f < NF; f++) {
+		let a = 0, wsum = 0;
+		for (let k = Math.max(0, f - 3 * sig); k <= Math.min(NF - 1, f + 3 * sig); k++) { const w = Math.exp(-((k - f) ** 2) / (2 * sig * sig)); a += runMax[Math.round(k)] * w; wsum += w; }
+		lift[f] = Math.max(a / wsum, need[f]);
+	}
+	const liftAt = (t) => { const x = Math.max(0, Math.min(NF - 1, t * FPS)); const i = Math.floor(x), k = x - i; return lerp(lift[i], lift[Math.min(NF - 1, i + 1)], k); };
+	function camAt(t) {
+		const c = rawCam(t);
+		const up = liftAt(t);
+		// raise the look point by the same amount so the framing does not tilt while lifting
+		return { pos: S(c.cx, c.cy, c.alt + up), look: S(c.tx, c.ty, c.g + up * 0.6), fov: c.fov };
 	}
 	function setCamera(c) {
 		const cam = eng.camera;
@@ -146,9 +185,9 @@
 		#vid .chip b { display: block; font: 600 22px var(--font-display), sans-serif; letter-spacing: 0; color: var(--c); margin-bottom: 4px; }
 		#vid .bar { height: 8px; width: 330px; border-radius: 4px; margin-top: 10px; }
 		#vid .mk { position: absolute; transform: translate(-50%, -100%); text-align: center; white-space: nowrap; }
-		#vid .mk .pill { display: inline-flex; align-items: center; gap: 10px; padding: 8px 16px 8px 8px; border-radius: 999px; background: rgba(10,13,20,.78); border: 1px solid rgba(255,255,255,.16); font: 600 21px var(--font-display), sans-serif; }
+		#vid .mk .pill { display: inline-flex; align-items: center; gap: 10px; padding: 9px 18px 9px 9px; border-radius: 999px; background: rgba(10,13,20,.78); border: 1px solid rgba(255,255,255,.16); font: 600 24px var(--font-display), sans-serif; }
 		#vid .mk .pill i { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #fff; color: #0a0d14; font: 700 16px var(--font-display); font-style: normal; }
-		#vid .mk .val { margin-top: 8px; font: 600 44px var(--font-display), sans-serif; color: var(--c); text-shadow: 0 2px 20px rgba(0,0,0,.9); font-variant-numeric: tabular-nums; }
+		#vid .mk .val { margin-top: 8px; font: 600 58px var(--font-display), sans-serif; color: var(--c); text-shadow: 0 2px 20px rgba(0,0,0,.9); font-variant-numeric: tabular-nums; }
 		#vid .mk .stem { width: 2px; height: 46px; margin: 6px auto 0; background: linear-gradient(rgba(255,255,255,.9), rgba(255,255,255,0)); }
 		#vid .mk .dot { width: 14px; height: 14px; border-radius: 50%; margin: -2px auto 0; background: #fff; box-shadow: 0 0 0 5px rgba(255,255,255,.25); transform: translateY(50%); }
 		#vid .end { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 150px; text-align: center; }
@@ -239,7 +278,9 @@
 	}
 
 	window.__plan = {
-		info: () => ({ TSTAR, date: fmtDate(TSTAR), sunEl: sky.sunEl, earthEl: sky.earthEl, lapseDays: LAPSE }),
+		info: () => ({ TSTAR, date: fmtDate(TSTAR), sunEl: sky.sunEl, earthEl: sky.earthEl, lapseDays: LAPSE, maxLift: Math.max(...lift), liftedFrames: [...need].filter((v) => v > 0).length }),
+		dbg: () => ({ need: [...need].filter((_, i) => i % 30 === 0).map(Math.round), lift: [...lift].filter((_, i) => i % 30 === 0).map(Math.round), raw: Array.from({ length: 61 }, (_, i) => { const c = rawCam(i * 0.5); return [Math.round(c.alt), Math.round(groundM(c.cx, c.cy)), +c.cx.toFixed(2), +c.cy.toFixed(2)]; }) }),
+		path: () => Array.from({ length: NF }, (_, f) => { const c = camAt(f / FPS); return [...c.pos, ...c.look, c.fov]; }),
 		setup() {
 			eng.cancelFlight();
 			// the app keeps the orbit above the horizon; the final shot looks slightly up at Earth
