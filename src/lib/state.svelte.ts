@@ -38,6 +38,8 @@ export const DEFAULT_MAX_SLOPE = 10;
 export const LUNAR_MONTH_H = 709; // 29.53 days
 export const YEAR_H = 8766;
 export const DEFAULT_HEIGHT_M = 2;
+/** mission length of the landing window shown on the site card */
+export const QUICK_DAYS = 14;
 export const BATTERY_PRESETS = { rover: 100, lander: 400, base: 5000 } as const;
 export type BatteryPreset = keyof typeof BATTERY_PRESETS | 'custom';
 
@@ -119,6 +121,12 @@ class AppState {
 
 	viewA = $derived(this.#viewFor(this.siteA));
 	viewB = $derived(this.siteB ? this.#viewFor(this.siteB) : null);
+	/** best 14-day landing window for site A inside the selected period (same ranking as the planner) */
+	quickBest = $derived.by<BestWindow | null>(() => {
+		const v = this.viewA, eph = this.eph;
+		if (!v || !eph) return null;
+		return bestWindows(v.series, Math.round((QUICK_DAYS * 86400) / eph.step_s), 1)[0] ?? null;
+	});
 
 	#viewFor(site: Site | undefined): SiteView | null {
 		const eph = this.eph;

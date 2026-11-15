@@ -94,13 +94,13 @@
 			{#if data}
 				<div class="cards">
 					<div class="vcard">
+						<span class="vt">{t.vMapTitle}</span>
+						<span class="vs">{t.vMapBody(data.lola_map.points)} · {data.lola_map.reference}</span>
+					</div>
+					<div class="vcard">
 						<span class="vt">{t.vHorizonsTitle}</span>
 						<span class="big num">{fmtNum(data.horizons.max_diff_arcsec, 2)}″</span>
 						<span class="vs">{t.vMaxDiff} · {t.vHorizonsBody(data.horizons.sites, data.horizons.epochs_per_site)}</span>
-					</div>
-					<div class="vcard">
-						<span class="vt">{t.vMapTitle}</span>
-						<span class="vs">{t.vMapBody(data.lola_map.points)} · {data.lola_map.reference}</span>
 					</div>
 				</div>
 				{@render agree(t.vAt0, data.lola_map.at_0m.sun, data.lola_map.at_0m.earth, false)}

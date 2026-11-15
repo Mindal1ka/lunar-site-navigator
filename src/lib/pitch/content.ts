@@ -79,14 +79,14 @@ export const PITCH = {
 		s5: {
 			kicker: 'Is it correct?',
 			title: 'Checked against NASA data and published research.',
-			r1: ['max difference from ', 'JPL Horizons', ' (3 sites × 293 dates)'],
+			r1: ['geometry check vs ', 'JPL Horizons', ': frames and timing, 3 sites × 293 dates (same JPL ephemerides, so not an independent accuracy test)'],
 			r2: ['mean error vs the ', 'NASA LOLA', ' illumination map, 150 points (r = 0.97)'],
 			note: 'Always compared at the same height and with the same definition as the reference. At 0 m our values are 8–28 pp below the published ones: on sharp ridges, terrain finer than a pixel decides. So the app uses a 2 m panel height by default.',
 			pp: 'pp',
-			tTitle: 'Gläser et al. (2018), Sun %',
+			tTitle: 'Gläser et al. (2018) and EPSC 2014, Sun %',
 			tSub: 'Same 2 m height, same definition (mean visible share of the disk), same period 2017–2037',
 			th: ['Site', 'Published', 'Ours', 'Diff'],
-			rows: ['Connecting Ridge C1', 'Connecting Ridge C2', 'Shackleton rim S1', 'Shackleton rim S2', 'EPSC 2014 spot 3, 10 m']
+			rows: ['Connecting Ridge C1', 'Connecting Ridge C2', 'Shackleton rim S1', 'Shackleton rim S2', 'EPSC 2014 spot 1, 2 m', 'EPSC 2014 spot 3, 10 m']
 		},
 		s6: {
 			kicker: 'For mission planners',
@@ -192,14 +192,14 @@ export const PITCH = {
 		s5: {
 			kicker: 'Чи це правильно?',
 			title: 'Перевірено за даними NASA й опублікованими дослідженнями.',
-			r1: ['найбільша різниця з ', 'JPL Horizons', ' (3 місця × 293 дати)'],
+			r1: ['перевірка геометрії за ', 'JPL Horizons', ': системи координат і час, 3 місця × 293 дати (ті самі ефемериди JPL, тож це не незалежна перевірка точності)'],
 			r2: ['середня похибка відносно карти освітленості ', 'NASA LOLA', ', 150 точок (r = 0,97)'],
 			note: 'Порівнюємо завжди на тій самій висоті й за тим самим визначенням, що й еталон. На 0 м розбіжність із публікацією 8–28 в. п.: на гострих гребенях вирішує рельєф, дрібніший за піксель. Тому за замовчуванням висота панелі 2 м.',
 			pp: 'в. п.',
-			tTitle: 'Gläser et al. (2018), Сонце %',
+			tTitle: 'Gläser et al. (2018) і EPSC 2014, Сонце %',
 			tSub: 'Та сама висота 2 м, те саме визначення (середня видима частка диска), той самий період 2017–2037',
 			th: ['Місце', 'Опубліковано', 'Наше', 'Різниця'],
-			rows: ['Connecting Ridge C1', 'Connecting Ridge C2', 'Вал Шеклтона S1', 'Вал Шеклтона S2', 'EPSC 2014, точка 3, 10 м']
+			rows: ['Connecting Ridge C1', 'Connecting Ridge C2', 'Вал Шеклтона S1', 'Вал Шеклтона S2', 'EPSC 2014, точка 1, 2 м', 'EPSC 2014, точка 3, 10 м']
 		},
 		s6: {
 			kicker: 'Для планувальників місій',

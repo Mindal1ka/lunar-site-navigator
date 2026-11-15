@@ -19,6 +19,7 @@
 	import MarginControl from '#lib/card/MarginControl.svelte';
 	import NowReadout from '#lib/card/NowReadout.svelte';
 	import DetailSquare from '#lib/card/DetailSquare.svelte';
+	import QuickWindow from '#lib/card/QuickWindow.svelte';
 	import ValidationPanel from './ValidationPanel.svelte';
 
 	const t = $derived(T[app.lang]);
@@ -124,6 +125,7 @@
 			{#if app.viewA}
 				<div class="metrics-wrap">
 					<Metrics bind:focus selectable={teacher} />
+					<QuickWindow />
 				</div>
 				<DetailSquare part="head" />
 			{:else}

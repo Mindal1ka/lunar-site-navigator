@@ -48,3 +48,6 @@ CLAUDE.md
 
 # rendered demo video (large; built by scripts/video/make.sh)
 /video/
+
+# Local speech notes
+/pitch-speech.md

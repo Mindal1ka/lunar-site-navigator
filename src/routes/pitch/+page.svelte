@@ -34,6 +34,7 @@
 		[78.1, 78.0, -0.1],
 		[85.5, 85.5, 0.0],
 		[82.1, 75.4, -6.7],
+		[88.1, 86.5, -1.6],
 		[92.5, 92.5, 0.0]
 	];
 
@@ -317,12 +318,12 @@
 				<div>
 					<div class="res">
 						<div class="card a up2" style:--d="2">
-							<div class="big ok-c"><span data-to="0.1">{num(0.1)}</span>″</div>
-							<p class="small">{T.s5.r1[0]}<b>{T.s5.r1[1]}</b>{T.s5.r1[2]}</p>
-						</div>
-						<div class="card a up2" style:--d="3">
 							<div class="big ok-c"><span data-to="1.0">{num(1.0)}</span>&nbsp;{T.s5.pp}</div>
 							<p class="small">{T.s5.r2[0]}<b>{T.s5.r2[1]}</b>{T.s5.r2[2]}</p>
+						</div>
+						<div class="card a up2" style:--d="3">
+							<div class="big ok-c"><span data-to="0.1">{num(0.1)}</span>″</div>
+							<p class="small">{T.s5.r1[0]}<b>{T.s5.r1[1]}</b>{T.s5.r1[2]}</p>
 						</div>
 					</div>
 					<p class="note a" style:--d="5">{T.s5.note}</p>
@@ -1050,12 +1051,12 @@
 	table {
 		width: 100%;
 		border-collapse: collapse;
-		font-size: 28px;
+		font-size: 26px;
 		font-variant-numeric: tabular-nums;
 	}
 	td,
 	th {
-		padding: 18px 6px;
+		padding: 12px 6px;
 		border-bottom: 1px solid var(--line);
 		text-align: right;
 	}
